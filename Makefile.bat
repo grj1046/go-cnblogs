@@ -1,0 +1,1 @@
+go build src\cnblogs\main\cnblogs.go
