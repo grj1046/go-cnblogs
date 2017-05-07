@@ -18,16 +18,19 @@ func Main() {
 	//901567
 	ingID := "1115171"
 	ingID = "1125100"
-	ingContent, err := ingClient.GetIngByID(ingID)
+	ingContent, originContent, err := ingClient.GetIngByID(ingID)
 	if err != nil {
 		fmt.Println("Get IngInfo Error: ", err)
 		os.Exit(1)
 	}
 
 	strr, _ := json.Marshal(ingContent)
-	log.Println("ccccccc==", string(strr))
+	log.Println("ingContent==", string(strr))
 
-	logFile, err := os.OpenFile(ingID+".html", os.O_RDWR|os.O_CREATE, 0777)
+	strrr, _ := json.Marshal(originContent)
+	log.Println("originContent==", string(strrr))
+
+	/*logFile, err := os.OpenFile(ingID+".html", os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		fmt.Println("Open log file", err)
 		os.Exit(1)
@@ -35,4 +38,5 @@ func Main() {
 	defer logFile.Close()
 	logger := log.New(logFile, "\r\n", log.Ldate|log.Ltime|log.Llongfile)
 	logger.Println(string(strr))
+	*/
 }
