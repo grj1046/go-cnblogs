@@ -81,6 +81,9 @@ func (client *Client) GetIngByID(ingID string) (*Content, error) {
 		return nil, err
 	}
 	publishTime := doc.Find(".ing_detail_title").Text()
+	publishTime = publishTime[strings.Index(publishTime, "：")+3:]
+	publishTime = strings.TrimSpace(publishTime)
+
 	//log.Println("publishTime>>>" + publishTime)
 	ingBody, err := doc.Find("#ing_detail_body").Html()
 
@@ -110,8 +113,14 @@ func (client *Client) GetIngByID(ingID string) (*Content, error) {
 		//AuthorID
 		authorID, _ := selection.Find(".ing_comment_face").Attr("src")
 		//https://pic.cnblogs.com/face/289132/20130423092122.png
-		tmplen = len("https://pic.cnblogs.com/face/")
-		authorID = authorID[tmplen:strings.LastIndex(authorID, "/")]
+
+		if strings.Index(authorID, "https://pic.cnblogs.com/face/u") != -1 {
+			tmplen = len("https://pic.cnblogs.com/face/u")
+			authorID = authorID[tmplen:strings.Index(authorID, ".jpg")]
+		} else {
+			tmplen = len("https://pic.cnblogs.com/face/")
+			authorID = authorID[tmplen:strings.LastIndex(authorID, "/")]
+		}
 		comment.AuthorID = authorID
 
 		authorNode := selection.Find("#comment_author_" + comment.CommentID)

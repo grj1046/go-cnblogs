@@ -17,6 +17,7 @@ func Main() {
 	ingClient.Init(conf.AuthCookie)
 	//901567
 	ingID := "1115171"
+	ingID = "1125100"
 	ingContent, err := ingClient.GetIngByID(ingID)
 	if err != nil {
 		fmt.Println("Get IngInfo Error: ", err)
@@ -33,6 +34,5 @@ func Main() {
 	}
 	defer logFile.Close()
 	logger := log.New(logFile, "\r\n", log.Ldate|log.Ltime|log.Llongfile)
-	logger.Println(ingContent.Body)
-	//1117187
+	logger.Println(string(strr))
 }
