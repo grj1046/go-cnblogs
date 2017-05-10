@@ -1,6 +1,7 @@
 package cnblogs
 
 import (
+	"cnblogs/db"
 	"cnblogs/ing"
 	"encoding/json"
 	"fmt"
@@ -15,9 +16,17 @@ func Main() {
 	conf := ReadConf()
 	ingClient := &ing.Client{}
 	ingClient.Init(conf.AuthCookie)
+	err := db.InitialDB()
+	if err != nil {
+		fmt.Println("Execute Sql Script Error: ", err)
+		os.Exit(1)
+	}
 	//901567
 	ingID := "1115171"
 	ingID = "1125100"
+	ingID = "1127096"
+	ingID = "1127498"
+	//ingID = "901567" //private ing
 	ingContent, originContent, err := ingClient.GetIngByID(ingID)
 	if err != nil {
 		fmt.Println("Get IngInfo Error: ", err)

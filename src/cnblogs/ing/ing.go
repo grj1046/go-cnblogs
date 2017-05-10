@@ -1,15 +1,13 @@
 package ing
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
-
 	"strings"
-
-	"encoding/json"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -24,13 +22,17 @@ type Client struct {
 
 //Content ing Content struct
 type Content struct {
-	IngID     string
-	Time      string
-	Body      string
-	Status    int
-	IsPrivate bool
-	updateAt  time.Time
-	Comments  []Comment
+	IngID          string
+	AuthorID       string
+	AuthorUserName string
+	AuthorNickName string
+	Time           string
+	Status         int
+	Lucky          bool
+	IsPrivate      bool
+	AcquiredAt     time.Time
+	Body           string
+	Comments       []Comment
 }
 
 //Comment Ing.Content's Comment
@@ -43,17 +45,16 @@ type Comment struct {
 	Body           string
 	Time           string
 	IsDelete       bool
-	updateAt       time.Time
 }
 
 //OriginContent store the origin ing html
 type OriginContent struct {
-	IngID     string
-	URL       string
-	Exception string
-	Status    int //200 404
-	updateAt  time.Time
-	HTML      string
+	IngID      string
+	URL        string
+	Status     int //200 404
+	AcquiredAt time.Time
+	Exception  string
+	HTML       string
 }
 
 //Init Initialize httpClient with authCookie
@@ -91,7 +92,7 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 	originContent.HTML = ""
 	originContent.URL = req.URL.String()
 	originContent.Status = 200
-	originContent.updateAt = nowTime
+	originContent.AcquiredAt = nowTime
 
 	feedBlock, err := doc.Find(".feed_block").Html()
 	if err != nil {
@@ -102,7 +103,7 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 
 	content := &Content{}
 	content.IngID = ingID
-	content.updateAt = nowTime
+	content.AcquiredAt = nowTime
 	content.Status = 200
 
 	errBody := doc.Find(".error_body")
@@ -112,18 +113,67 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 		originContent.Status = 404
 		return content, originContent, nil
 	}
+	//AuthorID
+	authorID, exists := doc.Find(".ing_item_face").Attr("src")
+	if exists {
+		//https://pic.cnblogs.com/face/289132/20130423092122.png
+		if strings.Index(authorID, "https://pic.cnblogs.com/face/u") != -1 {
+			tmplen := len("https://pic.cnblogs.com/face/u")
+			authorID = authorID[tmplen:strings.Index(authorID, ".jpg")]
+		} else {
+			tmplen := len("https://pic.cnblogs.com/face/")
+			authorID = authorID[tmplen:strings.LastIndex(authorID, "/")]
+		}
+		content.AuthorID = authorID
+	} else {
+		originContent.Exception += " get ing_item_face failed"
+	}
+
+	//AuthorUserName
+	authorUserName, exists := doc.Find(".ing_item_author").Attr("href")
+	if exists {
+		tmplen := len("//home.cnblogs.com/u/")
+		authorUserName = authorUserName[tmplen : len(authorUserName)-1]
+		content.AuthorUserName = authorUserName
+	} else {
+		originContent.Exception += " Get ing_item_author error: " + err.Error()
+	}
+
+	//AuthorNickName
+	authorNickName := doc.Find(".ing_item_author").Text()
+	content.AuthorNickName = authorNickName
 
 	publishTime := doc.Find(".ing_detail_title").Text()
+	//log.Println("publishTime>>>", publishTime)
 	publishTime = publishTime[strings.Index(publishTime, "：")+3:]
 	publishTime = strings.TrimSpace(publishTime)
 	content.Time = publishTime
+	//Lucky
+	ingDetailBody := doc.Find("#ing_detail_body")
+	_, exists = ingDetailBody.Find(".ing-icon").Attr("title")
+	if exists {
+		content.Lucky = true
+		ingDetailBody.Find(".ing-icon").Remove()
+	} else {
+		content.Lucky = false
+	}
+	//Private
+	privateNode := ingDetailBody.Find("img[title='私有闪存']")
+	_, exists = privateNode.Attr("title")
+	if exists {
+		content.IsPrivate = true
+	} else {
+		content.IsPrivate = false
+	}
+	privateNode.Remove()
 
-	//log.Println("publishTime>>>" + publishTime)
-	ingBody, err := doc.Find("#ing_detail_body").Html()
+	//ingBody
+	ingBody, err := ingDetailBody.Html()
 	if err != nil {
 		originContent.Exception += " Get ing_detail_body error: " + err.Error()
+	} else {
+		content.Body = ingBody
 	}
-	content.Body = ingBody
 
 	commentCount := doc.Find("#comment_block_" + ingID + " li").Length()
 	content.Comments = make([]Comment, commentCount)
@@ -137,39 +187,46 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 		commentID, exists := selection.Attr("id")
 		if !exists {
 			originContent.Exception += " commentID not found by id='comment_1400623', index: " + string(index)
+		} else {
+			tmplen := len("comment_")
+			comment.CommentID = commentID[tmplen:]
 		}
-		tmplen := len("comment_")
-		comment.CommentID = commentID[tmplen:]
+
 		//CommentTime class="text_green"
 		time, exists := selection.Find(".text_green").Attr("title")
 		if !exists {
 			originContent.Exception += " comment time not found by .text_green, index: " + string(index)
+		} else {
+			comment.Time = time
 		}
-		comment.Time = time
+
 		//AuthorID
 		authorID, exists := selection.Find(".ing_comment_face").Attr("src")
 		if !exists {
 			originContent.Exception += " AuthorID not found by .ing_comment_face, index: " + string(index)
-		}
-		//https://pic.cnblogs.com/face/289132/20130423092122.png
-		if strings.Index(authorID, "https://pic.cnblogs.com/face/u") != -1 {
-			tmplen = len("https://pic.cnblogs.com/face/u")
-			authorID = authorID[tmplen:strings.Index(authorID, ".jpg")]
 		} else {
-			tmplen = len("https://pic.cnblogs.com/face/")
-			authorID = authorID[tmplen:strings.LastIndex(authorID, "/")]
+			//https://pic.cnblogs.com/face/289132/20130423092122.png
+			if strings.Index(authorID, "https://pic.cnblogs.com/face/u") != -1 {
+				tmplen := len("https://pic.cnblogs.com/face/u")
+				authorID = authorID[tmplen:strings.Index(authorID, ".jpg")]
+			} else {
+				tmplen := len("https://pic.cnblogs.com/face/")
+				authorID = authorID[tmplen:strings.LastIndex(authorID, "/")]
+			}
+			comment.AuthorID = authorID
 		}
-		comment.AuthorID = authorID
 
 		authorNode := selection.Find("#comment_author_" + comment.CommentID)
 		//AuthorName //home.cnblogs.com/u/grj1046/
 		authorUserName, exists := authorNode.Attr("href")
 		if !exists {
 			originContent.Exception += " AuthorName not found by #comment_author_.href, index: " + string(index)
+		} else {
+			tmplen := len("//home.cnblogs.com/u/")
+			authorUserName = authorUserName[tmplen : len(authorUserName)-1]
+			comment.AuthorUserName = authorUserName
 		}
-		tmplen = len("//home.cnblogs.com/u/")
-		authorUserName = authorUserName[tmplen : len(authorUserName)-1]
-		comment.AuthorUserName = authorUserName
+
 		//AuthorNickName comment_author_1400623
 		comment.AuthorNickName = authorNode.Text()
 
@@ -191,16 +248,12 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 		body, err := tmpBody.Html()
 		if err != nil {
 			originContent.Exception += " Get comment detail exception, index: " + err.Error()
+		} else {
+			body = body[strings.Index(body, ": ")+1:]
+			body = strings.TrimSpace(body)
+			comment.Body = body
 		}
-		body = body[strings.Index(body, ": ")+1:]
-		body = strings.TrimSpace(body)
-		//log.Println("tmpBody======", body)
-		comment.Body = body
-
 		content.Comments[index] = *comment
-		//str, _ := json.Marshal(comment)
-		//log.Println("comment", string(str))
-
 		//printToConsole("comment => ", comment)
 	})
 	return content, originContent, nil
