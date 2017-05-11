@@ -2,7 +2,7 @@
 update: 2015/05/10 17:27
 table
     Ing
-    Content
+    Comment
     OriginIng
 */
 CREATE TABLE IF NOT EXISTS `Ing` (
@@ -18,8 +18,9 @@ CREATE TABLE IF NOT EXISTS `Ing` (
     `Body` VARCHAR(300)
 );
 
-CREATE TABLE IF NOT EXISTS `Content` (
+CREATE TABLE IF NOT EXISTS `Comment` (
     `ID` INTEGER PRIMARY KEY AUTOINCREMENT,
+    `CommentID` INTEGER,
     `IngID` INTEGER,
 	`AuthorID` INTEGER,
 	`AuthorUserName` VARCHAR(40),
@@ -36,5 +37,6 @@ CREATE TABLE IF NOT EXISTS `OriginIng` (
 	`Status` VARCHAR(3),
 	`AcquiredAt` VARCHAR(40),
 	`Exception` TEXT,
+    `HTMLHash`  VARCHAR(32),
 	`HTML`       TEXT
 );
