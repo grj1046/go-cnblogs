@@ -5,19 +5,36 @@ import (
 	"io/ioutil"
 
 	//github.com/mattn/go-sqlite3
-
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var dbPath = "./cnblogs.db"
+var dbPathOrigin = "./cnblogs_origin.db"
 
 //GetDB Get Sqlite database instance
 func GetDB() (*sql.DB, error) {
 	return sql.Open("sqlite3", dbPath)
 }
 
+//GetDBOrigin Get Sqlite database instance
+func GetDBOrigin() (*sql.DB, error) {
+	return sql.Open("sqlite3", dbPathOrigin)
+}
+
 //InitialDB initial conblogs.ing database structures
 func InitialDB() error {
+	err := initialCnblogs()
+	if err != nil {
+		return err
+	}
+	err = initialCnblogsOrigin()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func initialCnblogs() error {
 	//load sql
 	sqlbuf, err := ioutil.ReadFile("./cnblogs.sql")
 	if err != nil {
@@ -38,9 +55,30 @@ func InitialDB() error {
 	return nil
 }
 
+func initialCnblogsOrigin() error {
+	//load sql
+	sqlbuf, err := ioutil.ReadFile("./cnblogs_origin.sql")
+	if err != nil {
+		return err
+	}
+	sqlStmt := string(sqlbuf)
+
+	db, err := GetDBOrigin()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	_, err = db.Exec(sqlStmt)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 //Execute Execute Sql
 func Execute(strSQL string, args ...interface{}) (*sql.Result, error) {
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := GetDB()
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +92,7 @@ func Execute(strSQL string, args ...interface{}) (*sql.Result, error) {
 
 //ExecuteTrans insert update delete
 func ExecuteTrans(strSQL string, args ...interface{}) (*sql.Result, error) {
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := GetDB()
 	if err != nil {
 		return nil, err
 	}
