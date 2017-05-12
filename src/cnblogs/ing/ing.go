@@ -50,7 +50,6 @@ type Comment struct {
 //OriginContent store the origin ing html
 type OriginContent struct {
 	IngID      string
-	URL        string
 	Status     int //200 404
 	AcquiredAt time.Time
 	Exception  string
@@ -85,12 +84,12 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	nowTime := time.Now()
 
 	originContent := &OriginContent{}
 	originContent.IngID = ingID
 	originContent.HTML = ""
-	originContent.URL = req.URL.String()
 	originContent.Status = 200
 	originContent.AcquiredAt = nowTime
 
@@ -113,6 +112,14 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 		originContent.Status = 404
 		return content, originContent, nil
 	}
+
+	if doc.Find("#Main form #Heading").Text() == "登录博客园 - 代码改变世界" {
+		//need re acquired
+		content.Status = 403
+		originContent.Status = 403
+		return content, originContent, nil
+	}
+
 	//AuthorID
 	authorID, exists := doc.Find(".ing_item_face").Attr("src")
 	if exists {

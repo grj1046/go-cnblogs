@@ -38,6 +38,10 @@ func Main() {
 		fmt.Println("Get IngInfo Error: ", err)
 		os.Exit(1)
 	}
+	if ingContent.Status == 403 {
+		fmt.Println("auth cookie invalid, please check.")
+		os.Exit(1)
+	}
 	err = InsertIngToDB(*ingContent, *originContent)
 	if err != nil {
 		fmt.Println("Get IngInfo Error: ", err)
@@ -104,10 +108,10 @@ func InsertIngToDB(ingContent ing.Content, originContent ing.OriginContent) erro
 	var htmlHash string
 	err = row.Scan(&htmlHash)
 	if err == sql.ErrNoRows {
-		sqlIngOriginContent := "insert into OriginIng (IngID, URL, Status, AcquiredAt, Exception, HTMLHash, HTML) values (?, ?, ?, ?, ?, ?, ?);"
+		sqlIngOriginContent := "insert into OriginIng (IngID, Status, AcquiredAt, Exception, HTMLHash, HTML) values (?, ?, ?, ?, ?, ?);"
 		HTMLHash := md5String(originContent.HTML)
 		trans.Prepare(sqlIngOriginContent)
-		_, err = trans.Exec(sqlIngOriginContent, originContent.IngID, originContent.URL, originContent.Status,
+		_, err = trans.Exec(sqlIngOriginContent, originContent.IngID, originContent.Status,
 			originContent.AcquiredAt, originContent.Exception, HTMLHash, originContent.HTML)
 		if err != nil {
 			trans.Rollback()
