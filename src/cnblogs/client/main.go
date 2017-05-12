@@ -8,7 +8,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"os"
+
+	"strconv"
+
+	"github.com/robfig/cron"
 )
 
 //"github.com/PuerkitoBio/goquery"
@@ -33,21 +38,39 @@ func Main() {
 	ingID = "1127350"
 	ingID = "1129270"
 
-	//search if current Ing in table && ingStatus is 404, do nothing.
-	ingContent, originContent, err := ingClient.GetIngByID(ingID)
-	if err != nil {
-		fmt.Println("Get IngInfo Error: ", err)
-		os.Exit(1)
-	}
-	if ingContent.Status == 403 {
-		fmt.Println("auth cookie invalid, please check.")
-		os.Exit(1)
-	}
-	err = InsertIngToDB(*ingContent, *originContent)
-	if err != nil {
-		fmt.Println("Get IngInfo Error: ", err)
-		os.Exit(1)
-	}
+	//c := cron.New()
+
+	ingID = "0"
+	c := cron.New()
+	spec := "*/1 * * * * *"
+	c.AddFunc(spec, func() {
+		//ingID++
+		i, err := strconv.Atoi(ingID)
+		if err != nil {
+			fmt.Println("convert to int error", err.Error())
+			os.Exit(1)
+		}
+		i++
+		ingID = strconv.Itoa(i)
+		//search if current Ing in table && ingStatus is 404, do nothing.
+		ingContent, originContent, err := ingClient.GetIngByID(ingID)
+		if err != nil {
+			fmt.Println("Get IngInfo Error: ", err)
+			os.Exit(1)
+		}
+		if ingContent.Status == 403 {
+			fmt.Println("auth cookie invalid, please check.")
+			os.Exit(1)
+		}
+		err = InsertIngToDB(*ingContent, *originContent)
+		if err != nil {
+			fmt.Println("Get IngInfo Error: ", err)
+			os.Exit(1)
+		}
+		log.Println("start", ingID)
+	})
+	c.Start()
+	select {} //阻塞主线程不退出
 }
 
 //InsertIngToDB Insert or update Ing To sqlite3 db
@@ -73,7 +96,12 @@ func InsertIngToDB(ingContent ing.Content, originContent ing.OriginContent) erro
 	err = row.Scan(&ingStatus)
 	if err == sql.ErrNoRows {
 		sqlIngContent := "insert into `Ing` (`IngID`, `AuthorID`, `AuthorUserName`, `AuthorNickName`, `Time`, `Status`, `Lucky`, `IsPrivate`, `AcquiredAt`, `Body`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
-		trans.Prepare(sqlIngContent)
+		stmt, err = trans.Prepare(sqlIngContent)
+		if err != nil {
+			trans.Rollback()
+			return errors.New("prepare ing sql error: " + err.Error())
+		}
+		defer stmt.Close()
 		_, err = trans.Exec(sqlIngContent, ingContent.IngID, ingContent.AuthorID, ingContent.AuthorUserName, ingContent.AuthorNickName,
 			ingContent.Time, ingContent.Status, ingContent.Lucky, ingContent.IsPrivate, ingContent.AcquiredAt, ingContent.Body)
 		if err != nil {
@@ -90,7 +118,13 @@ func InsertIngToDB(ingContent ing.Content, originContent ing.OriginContent) erro
 	if ingContent.Status == 404 {
 		//update status = 404 and return
 		sqlIngUpdate := "update `Ing` set `Status` = 404 where `IngID` = ?"
-		_, err := sqlite.Exec(sqlIngUpdate, ingContent.IngID)
+		stmt, err = trans.Prepare(sqlIngUpdate)
+		if err != nil {
+			trans.Rollback()
+			return errors.New("prepare update status sql error: " + err.Error())
+		}
+		defer stmt.Close()
+		_, err := stmt.Exec(ingContent.IngID)
 		if err != nil {
 			trans.Rollback()
 			return errors.New("update ing Status error: " + err.Error())
@@ -135,6 +169,7 @@ func InsertIngToDB(ingContent ing.Content, originContent ing.OriginContent) erro
 		trans.Rollback()
 		return errors.New("prepare insert ingComment sql error: " + err.Error())
 	}
+	defer stmt.Close()
 	for _, ingComment := range ingContent.Comments {
 		//if CommentID in savedCommentIDs, remove it.
 		currIndex := -1
@@ -166,6 +201,7 @@ func InsertIngToDB(ingContent ing.Content, originContent ing.OriginContent) erro
 		trans.Rollback()
 		return errors.New("prepare update set IsDelete sql error: " + err.Error())
 	}
+	defer stmt.Close()
 	if err != nil {
 		trans.Rollback()
 		return errors.New("prepare delete sql error: " + err.Error())
@@ -186,6 +222,11 @@ func InsertIngToDB(ingContent ing.Content, originContent ing.OriginContent) erro
 	if commentUpdated && ingStatus == 200 {
 		sqlStmt := "update `Ing` set `AcquiredAt` = ? where `IngID` = ?"
 		stmt, err = trans.Prepare(sqlStmt)
+		if err != nil {
+			trans.Rollback()
+			return errors.New("prepare ing AcquiredAt error: " + err.Error())
+		}
+		defer stmt.Close()
 		_, err := stmt.Exec(ingContent.AcquiredAt, ingContent.IngID)
 		if err != nil {
 			trans.Rollback()
@@ -218,6 +259,11 @@ func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
 		sqlIngOriginContent := "insert into OriginIng (IngID, Status, AcquiredAt, Exception, HTMLHash, HTML) values (?, ?, ?, ?, ?, ?);"
 		HTMLHash := md5String(originContent.HTML)
 		stmt, err = trans.Prepare(sqlIngOriginContent)
+		if err != nil {
+			trans.Rollback()
+			return errors.New("prepare OriginContent error: " + err.Error())
+		}
+		defer stmt.Close()
 		_, err = stmt.Exec(originContent.IngID, originContent.Status, originContent.AcquiredAt,
 			originContent.Exception, HTMLHash, originContent.HTML)
 		if err != nil {
