@@ -2,10 +2,8 @@ package ing
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -77,13 +75,6 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 		return nil, nil, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, nil, errors.New("StatusCode: " + strconv.Itoa(resp.StatusCode))
-	}
-	doc, err := goquery.NewDocumentFromResponse(resp)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	nowTime := time.Now()
 
@@ -93,18 +84,26 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 	originContent.Status = 200
 	originContent.AcquiredAt = nowTime
 
+	content := &Content{}
+	content.IngID = ingID
+	content.AcquiredAt = nowTime
+	content.Status = 200
+
+	if resp.StatusCode != 200 {
+		content.Status = resp.StatusCode
+		originContent.Status = resp.StatusCode
+		return content, originContent, nil
+	}
+	doc, err := goquery.NewDocumentFromResponse(resp)
+	if err != nil {
+		return nil, nil, err
+	}
 	feedBlock, err := doc.Find(".feed_block").Html()
 	if err != nil {
 		originContent.Exception += " Get feed_block error: " + err.Error()
 	} else {
 		originContent.HTML = feedBlock
 	}
-
-	content := &Content{}
-	content.IngID = ingID
-	content.AcquiredAt = nowTime
-	content.Status = 200
-
 	errBody := doc.Find(".error_body")
 	//if return 404
 	if errBody.Text() != "" {
@@ -123,13 +122,38 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 	//AuthorID
 	authorID, exists := doc.Find(".ing_item_face").Attr("src")
 	if exists {
+		//https://pic.cnblogs.com/face/sample_face.gif  test case: ingid=26
 		//https://pic.cnblogs.com/face/289132/20130423092122.png
-		if strings.Index(authorID, "https://pic.cnblogs.com/face/u") != -1 {
+		if strings.Index(authorID, "sample_face.gif") != -1 {
+			//replyToSpaceUserId=9931;isIngItem=true
+			ret, err := doc.Html()
+			if err != nil {
+				originContent.Exception += " Get sample_face.gif error: " + err.Error()
+			} else {
+				start := strings.Index(ret, "replyToSpaceUserId=") + len("replyToSpaceUserId=")
+				end := strings.Index(ret, ";isIngItem=")
+				if start != -1 && end != -1 {
+					authorID = ret[start:end]
+				} else {
+					originContent.Exception += " get AuthorID failed: sample_face.gif"
+				}
+			}
+		} else if strings.Index(authorID, "https://pic.cnblogs.com/face/u") != -1 {
 			tmplen := len("https://pic.cnblogs.com/face/u")
-			authorID = authorID[tmplen:strings.Index(authorID, ".jpg")]
+			if strings.Index(authorID, ".jpg") != -1 {
+				authorID = authorID[tmplen:strings.Index(authorID, ".jpg")]
+			} else if strings.Index(authorID, ".gif") != -1 {
+				authorID = authorID[tmplen:strings.Index(authorID, ".gif")]
+			} else {
+				originContent.Exception += " get AuthorID failed: (face/u)" + authorID
+			}
 		} else {
 			tmplen := len("https://pic.cnblogs.com/face/")
-			authorID = authorID[tmplen:strings.LastIndex(authorID, "/")]
+			if strings.LastIndex(authorID, "/") != -1 {
+				authorID = authorID[tmplen:strings.LastIndex(authorID, "/")]
+			} else {
+				originContent.Exception += " get AuthorID failed: (face)" + authorID
+			}
 		}
 		content.AuthorID = authorID
 	} else {
@@ -140,8 +164,12 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 	authorUserName, exists := doc.Find(".ing_item_author").Attr("href")
 	if exists {
 		tmplen := len("//home.cnblogs.com/u/")
-		authorUserName = authorUserName[tmplen : len(authorUserName)-1]
-		content.AuthorUserName = authorUserName
+		if strings.Index(authorUserName, "//home.cnblogs.com/u/") != -1 {
+			authorUserName = authorUserName[tmplen : len(authorUserName)-1]
+			content.AuthorUserName = authorUserName
+		} else {
+			originContent.Exception += " get AuthorUserName failed"
+		}
 	} else {
 		originContent.Exception += " Get ing_item_author error: " + err.Error()
 	}
@@ -151,7 +179,7 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 	content.AuthorNickName = authorNickName
 
 	publishTime := doc.Find(".ing_detail_title").Text()
-	//log.Println("publishTime>>>", publishTime)
+
 	publishTime = publishTime[strings.Index(publishTime, "：")+3:]
 	publishTime = strings.TrimSpace(publishTime)
 	content.Time = publishTime
@@ -208,20 +236,33 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 		}
 
 		//AuthorID
-		authorID, exists := selection.Find(".ing_comment_face").Attr("src")
+		//commentReply(1129969,1415060,9487);return false
+		authorID, exists := selection.Find(".gray3").Attr("onclick")
+		//https://pic.cnblogs.com/face/sample_face.gif
+		//https://pic.cnblogs.com/face/289132/20130423092122.png
 		if !exists {
-			originContent.Exception += " AuthorID not found by .ing_comment_face, index: " + string(index)
+			originContent.Exception += " AuthorID not found by .gray3, index: " + string(index)
 		} else {
-			//https://pic.cnblogs.com/face/289132/20130423092122.png
-			if strings.Index(authorID, "https://pic.cnblogs.com/face/u") != -1 {
-				tmplen := len("https://pic.cnblogs.com/face/u")
-				authorID = authorID[tmplen:strings.Index(authorID, ".jpg")]
+			start := strings.LastIndex(authorID, ",")
+			end := strings.Index(authorID, ");")
+			if start != -1 && end != -1 {
+				authorID = authorID[start+1 : end]
+				comment.AuthorID = authorID
 			} else {
-				tmplen := len("https://pic.cnblogs.com/face/")
-				authorID = authorID[tmplen:strings.LastIndex(authorID, "/")]
+				originContent.Exception += "get comment AuthorID error"
 			}
-			comment.AuthorID = authorID
 		}
+		/*
+			if strings.Index(authorID, "https://pic.cnblogs.com/face/u") != -1 {
+					tmplen := len("https://pic.cnblogs.com/face/u")
+					authorID = authorID[tmplen:strings.Index(authorID, ".jpg")]
+				} else {
+					tmplen := len("https://pic.cnblogs.com/face/")
+					authorID = authorID[tmplen:strings.LastIndex(authorID, "/")]
+				}
+				comment.AuthorID = authorID
+			}
+		*/
 
 		authorNode := selection.Find("#comment_author_" + comment.CommentID)
 		//AuthorName //home.cnblogs.com/u/grj1046/
