@@ -144,6 +144,12 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 				authorID = authorID[tmplen:strings.Index(authorID, ".jpg")]
 			} else if strings.Index(authorID, ".gif") != -1 {
 				authorID = authorID[tmplen:strings.Index(authorID, ".gif")]
+			} else if strings.Index(authorID, ".jpeg") != -1 {
+				authorID = authorID[tmplen:strings.Index(authorID, ".jpeg")]
+			} else if strings.Index(authorID, ".png") != -1 {
+				authorID = authorID[tmplen:strings.Index(authorID, ".png")]
+			} else if strings.Index(authorID, ".bmp") != -1 {
+				authorID = authorID[tmplen:strings.Index(authorID, ".bmp")]
 			} else {
 				originContent.Exception += " get AuthorID failed: (face/u)" + authorID
 			}

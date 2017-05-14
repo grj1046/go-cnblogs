@@ -37,7 +37,7 @@ func Main() {
 	ingID = "1127350"
 	ingID = "1129270"
 	ingID = "26"
-	ingID = "0"
+	ingID = "495"
 	c := cron.New()
 	spec := "*/1 * * * * *"
 	c.AddFunc(spec, func() {
@@ -50,7 +50,6 @@ func Main() {
 		i++
 		ingID = strconv.Itoa(i)
 		fmt.Println("start", ingID)
-
 		//search if current Ing in table && ingStatus is 404, do nothing.
 		ingContent, originContent, err := ingClient.GetIngByID(ingID)
 		if err != nil {
@@ -75,6 +74,7 @@ func Main() {
 			fmt.Println("Get IngInfo Error: ", err)
 			os.Exit(1)
 		}
+		i++
 	})
 	c.Start()
 	select {} //阻塞主线程不退出
