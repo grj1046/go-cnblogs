@@ -273,7 +273,7 @@ func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
 	md5Hash := md5String(originContent.HTML)
 	var htmlHash string
 	err = stmt.QueryRow(ingID, md5Hash).Scan(&htmlHash)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		trans.Rollback()
 		return errors.New("scan htmlHash error: " + err.Error())
 	}
