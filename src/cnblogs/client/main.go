@@ -264,7 +264,7 @@ func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
 	defer originDB.Close()
 
 	trans, err := originDB.Begin()
-	stmt, err := originDB.Prepare("select `HTMLHash` from `OriginIng` where `IngID` = ? and `HTMLHash` = ?")
+	stmt, err := trans.Prepare("select `HTMLHash` from `OriginIng` where `IngID` = ? and `HTMLHash` = ?")
 	if err != nil {
 		trans.Rollback()
 		return errors.New("prepare select OriginIng hash error: " + err.Error())
