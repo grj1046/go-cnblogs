@@ -8,6 +8,8 @@ import (
 
 //Conf config.json
 type Conf struct {
+	StartIngID int
+	EndIngID   int
 	AuthCookie string
 }
 

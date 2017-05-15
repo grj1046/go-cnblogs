@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `Ing` (
     `Status` VARCHAR(3),
     `Lucky` BOOL NOT NULL DEFAULT 0,
     `IsPrivate` BOOL NOT NULL DEFAULT 0,
+    `IsNewbie` BOOL NOT NULL DEFAULT 0,
     `AcquiredAt` VARCHAR(40),
     `Body` VARCHAR(300)
 );

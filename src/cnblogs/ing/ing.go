@@ -28,6 +28,7 @@ type Content struct {
 	Status         int
 	Lucky          bool
 	IsPrivate      bool
+	IsNewbie       bool
 	AcquiredAt     time.Time
 	Body           string
 	Comments       []Comment
@@ -191,10 +192,11 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 	content.Time = publishTime
 	//Lucky
 	ingDetailBody := doc.Find("#ing_detail_body")
-	_, exists = ingDetailBody.Find(".ing-icon").Attr("title")
+	luckyNode := ingDetailBody.Find("img[title='这是幸运闪']")
+	_, exists = luckyNode.Attr("title")
 	if exists {
 		content.Lucky = true
-		ingDetailBody.Find(".ing-icon").Remove()
+		luckyNode.Remove()
 	} else {
 		content.Lucky = false
 	}
@@ -203,10 +205,19 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 	_, exists = privateNode.Attr("title")
 	if exists {
 		content.IsPrivate = true
+		privateNode.Remove()
 	} else {
 		content.IsPrivate = false
 	}
-	privateNode.Remove()
+	//newbie
+	newbieNode := ingDetailBody.Find("img[title='欢迎新人']")
+	_, exists = newbieNode.Attr("title")
+	if exists {
+		content.IsNewbie = true
+		newbieNode.Remove()
+	} else {
+		content.IsNewbie = false
+	}
 
 	//ingBody
 	ingBody, err := ingDetailBody.Html()
@@ -247,7 +258,38 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 		//https://pic.cnblogs.com/face/sample_face.gif
 		//https://pic.cnblogs.com/face/289132/20130423092122.png
 		if !exists {
-			originContent.Exception += " AuthorID not found by .gray3, index: " + string(index)
+			//search with class="ing_comment_face".src
+			selfAuthorID, selfExists := selection.Find(".ing_comment_face").Attr("src")
+			if selfExists {
+				if strings.Index(selfAuthorID, "https://pic.cnblogs.com/face/u") != -1 {
+					tmplen := len("https://pic.cnblogs.com/face/u")
+					if strings.Index(selfAuthorID, ".jpg") != -1 {
+						selfAuthorID = selfAuthorID[tmplen:strings.Index(selfAuthorID, ".jpg")]
+					} else if strings.Index(selfAuthorID, ".gif") != -1 {
+						selfAuthorID = selfAuthorID[tmplen:strings.Index(selfAuthorID, ".gif")]
+					} else if strings.Index(selfAuthorID, ".jpeg") != -1 {
+						selfAuthorID = selfAuthorID[tmplen:strings.Index(selfAuthorID, ".jpeg")]
+					} else if strings.Index(selfAuthorID, ".png") != -1 {
+						selfAuthorID = selfAuthorID[tmplen:strings.Index(selfAuthorID, ".png")]
+					} else if strings.Index(selfAuthorID, ".bmp") != -1 {
+						selfAuthorID = selfAuthorID[tmplen:strings.Index(selfAuthorID, ".bmp")]
+					} else {
+						originContent.Exception += " get selfAuthorID failed: (face/u)" + selfAuthorID
+					}
+				} else {
+					tmplen := len("https://pic.cnblogs.com/face/")
+					if strings.LastIndex(selfAuthorID, "/") != -1 {
+						selfAuthorID = selfAuthorID[tmplen:strings.LastIndex(selfAuthorID, "/")]
+					} else {
+						originContent.Exception += " get selfAuthorID failed: (face)" + selfAuthorID
+					}
+				}
+				if selfAuthorID != "" {
+					comment.AuthorID = selfAuthorID
+				}
+			} else {
+				originContent.Exception += " AuthorID not found by .gray3, ing_comment_face, index: " + string(index)
+			}
 		} else {
 			start := strings.LastIndex(authorID, ",")
 			end := strings.Index(authorID, ");")
@@ -258,17 +300,6 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 				originContent.Exception += "get comment AuthorID error"
 			}
 		}
-		/*
-			if strings.Index(authorID, "https://pic.cnblogs.com/face/u") != -1 {
-					tmplen := len("https://pic.cnblogs.com/face/u")
-					authorID = authorID[tmplen:strings.Index(authorID, ".jpg")]
-				} else {
-					tmplen := len("https://pic.cnblogs.com/face/")
-					authorID = authorID[tmplen:strings.LastIndex(authorID, "/")]
-				}
-				comment.AuthorID = authorID
-			}
-		*/
 
 		authorNode := selection.Find("#comment_author_" + comment.CommentID)
 		//AuthorName //home.cnblogs.com/u/grj1046/

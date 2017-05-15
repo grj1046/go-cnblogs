@@ -27,35 +27,31 @@ func Main() {
 		os.Exit(1)
 	}
 	//http://home.cnblogs.com/ing/1115171/
-	//901567
-	ingID := "1115171"
-	ingID = "1125100"
-	ingID = "1127096"
-	ingID = "1127498"
-	//ingID = "901567" //private ing
-	//ingID = "1128213" //是狼是狗
-	ingID = "1127350"
-	ingID = "1129270"
-	ingID = "26"
-	ingID = "495"
+
+	if conf.StartIngID <= 0 || conf.EndIngID <= 0 || conf.EndIngID < conf.StartIngID {
+		fmt.Println("config startIngID or endIngID config error")
+		os.Exit(1)
+	}
+
+	ingID := conf.StartIngID
 	c := cron.New()
 	spec := "*/1 * * * * *"
 	c.AddFunc(spec, func() {
 		//ingID++
-		i, err := strconv.Atoi(ingID)
-		if err != nil {
-			fmt.Println("convert to int error", err.Error())
-			os.Exit(1)
-		}
-		i++
-		ingID = strconv.Itoa(i)
+		currentIngID := strconv.Itoa(ingID)
 		fmt.Println("start", ingID)
 		//search if current Ing in table && ingStatus is 404, do nothing.
-		ingContent, originContent, err := ingClient.GetIngByID(ingID)
+		ingContent, originContent, err := ingClient.GetIngByID(currentIngID)
 		if err != nil {
 			fmt.Println("Get IngInfo Error: ", err)
 			os.Exit(1)
 		}
+		if ingID >= conf.EndIngID {
+			fmt.Println("task finished")
+			c.Stop()
+			os.Exit(0)
+		}
+		ingID++
 
 		if ingContent.Status == 403 {
 			fmt.Println("auth cookie invalid, please check.")
@@ -74,7 +70,6 @@ func Main() {
 			fmt.Println("Get IngInfo Error: ", err)
 			os.Exit(1)
 		}
-		i++
 	})
 	c.Start()
 	select {} //阻塞主线程不退出
@@ -120,7 +115,7 @@ func InsertIngToDB(ingContent ing.Content) error {
 	err = row.Scan(&ingStatus)
 
 	if err == sql.ErrNoRows {
-		sqlIngContent := "insert into `Ing` (`IngID`, `AuthorID`, `AuthorUserName`, `AuthorNickName`, `Time`, `Status`, `Lucky`, `IsPrivate`, `AcquiredAt`, `Body`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
+		sqlIngContent := "insert into `Ing` (`IngID`, `AuthorID`, `AuthorUserName`, `AuthorNickName`, `Time`, `Status`, `Lucky`, `IsPrivate`, `IsNewbie`, `AcquiredAt`, `Body`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
 		stmt, err = trans.Prepare(sqlIngContent)
 		if err != nil {
 			trans.Rollback()
@@ -128,7 +123,8 @@ func InsertIngToDB(ingContent ing.Content) error {
 		}
 		defer stmt.Close()
 		_, err = stmt.Exec(ingContent.IngID, ingContent.AuthorID, ingContent.AuthorUserName, ingContent.AuthorNickName,
-			ingContent.Time, ingContent.Status, ingContent.Lucky, ingContent.IsPrivate, ingContent.AcquiredAt, ingContent.Body)
+			ingContent.Time, ingContent.Status, ingContent.Lucky, ingContent.IsPrivate, ingContent.IsNewbie,
+			ingContent.AcquiredAt, ingContent.Body)
 		if err != nil {
 			fmt.Println("err", err)
 			trans.Rollback()

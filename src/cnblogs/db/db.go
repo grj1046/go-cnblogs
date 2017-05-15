@@ -8,8 +8,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var dbPath = "./cnblogs.db"
-var dbPathOrigin = "./cnblogs_origin.db"
+var dbPath = "./data/cnblogs.db"
+var dbPathOrigin = "./data/cnblogs_origin.db"
 
 //GetDB Get Sqlite database instance
 func GetDB() (*sql.DB, error) {
@@ -36,7 +36,7 @@ func InitialDB() error {
 
 func initialCnblogs() error {
 	//load sql
-	sqlbuf, err := ioutil.ReadFile("./cnblogs.sql")
+	sqlbuf, err := ioutil.ReadFile("./sql/cnblogs.sql")
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func initialCnblogs() error {
 
 func initialCnblogsOrigin() error {
 	//load sql
-	sqlbuf, err := ioutil.ReadFile("./cnblogs_origin.sql")
+	sqlbuf, err := ioutil.ReadFile("./sql/cnblogs_origin.sql")
 	if err != nil {
 		return err
 	}
