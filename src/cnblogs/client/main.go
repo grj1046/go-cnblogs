@@ -39,7 +39,7 @@ func Main() {
 	c.AddFunc(spec, func() {
 		//ingID++
 		currentIngID := strconv.Itoa(ingID)
-		fmt.Println("start", ingID)
+		fmt.Println("currentIngID", currentIngID)
 		//search if current Ing in table && ingStatus is 404, do nothing.
 		ingContent, originContent, err := ingClient.GetIngByID(currentIngID)
 		if err != nil {
@@ -114,7 +114,7 @@ func InsertIngToDB(ingContent ing.Content) error {
 	var ingStatus int
 	err = row.Scan(&ingStatus)
 
-	if err == sql.ErrNoRows {
+	if ingStatus == 0 || err == sql.ErrNoRows {
 		sqlIngContent := "insert into `Ing` (`IngID`, `AuthorID`, `AuthorUserName`, `AuthorNickName`, `Time`, `Status`, `Lucky`, `IsPrivate`, `IsNewbie`, `AcquiredAt`, `Body`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
 		stmt, err = trans.Prepare(sqlIngContent)
 		if err != nil {

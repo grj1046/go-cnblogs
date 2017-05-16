@@ -8,8 +8,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var dbPath = "./data/cnblogs.db"
-var dbPathOrigin = "./data/cnblogs_origin.db"
+var dbPath = "./data/cnblogs.db?cache=shared&mode=rwc&_busy_timeout=3000"
+var dbPathOrigin = "./data/cnblogs_origin.db?cache=shared&mode=rwc&_busy_timeout=3000"
 
 //GetDB Get Sqlite database instance
 func GetDB() (*sql.DB, error) {
