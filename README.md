@@ -1,6 +1,8 @@
 # go-cnblogs
 cnblogs ing services write by golang https://ing.cnblogs.com/
 
+http://home.cnblogs.com/ing/1/
+
 PRAGMA busy_timeout=4000;
 
 ```bash
