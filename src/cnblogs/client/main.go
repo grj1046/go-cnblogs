@@ -262,37 +262,29 @@ func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
 		return errors.New("open origin db error:" + err.Error())
 	}
 	defer originDB.Close()
-
-	trans, err := originDB.Begin()
-	stmt, err := trans.Prepare("select `HTMLHash` from `OriginIng` where `IngID` = ? and `HTMLHash` = ?")
-	if err != nil {
-		trans.Rollback()
-		return errors.New("prepare select OriginIng hash error: " + err.Error())
-	}
-	defer stmt.Close()
 	md5Hash := md5String(originContent.HTML)
 	var htmlHash string
-	err = stmt.QueryRow(ingID, md5Hash).Scan(&htmlHash)
+	err = originDB.QueryRow("select `HTMLHash` from `OriginIng` where `IngID` = ? and `HTMLHash` = ?",
+		ingID, md5Hash).Scan(&htmlHash)
 	if err != nil && err != sql.ErrNoRows {
-		trans.Rollback()
 		return errors.New("scan htmlHash error: " + err.Error())
 	}
+
 	if htmlHash == "" || err == sql.ErrNoRows {
 		sqlIngOriginContent := "insert into OriginIng (IngID, Status, AcquiredAt, Exception, HTMLHash, HTML) values (?, ?, ?, ?, ?, ?);"
-		stmt, err = trans.Prepare(sqlIngOriginContent)
-		if err != nil {
-			trans.Rollback()
-			return errors.New("prepare OriginContent error: " + err.Error())
-		}
-		defer stmt.Close()
-		_, err := stmt.Exec(originContent.IngID, originContent.Status, originContent.AcquiredAt,
+		_, err := originDB.Exec(sqlIngOriginContent, originContent.IngID, originContent.Status, originContent.AcquiredAt,
 			originContent.Exception, md5Hash, originContent.HTML)
 		if err != nil {
-			trans.Rollback()
 			return errors.New("insert OriginContent error: " + err.Error())
 		}
+		/*
+			id, err := result.LastInsertId()
+			if err != nil {
+				return errors.New("get LastInsertId error: " + err.Error())
+			}
+			fmt.Println("id", id)
+		*/
 	}
-	trans.Commit()
 	return nil
 }
 
