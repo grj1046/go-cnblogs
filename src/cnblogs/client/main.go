@@ -100,13 +100,13 @@ func InsertIngToDB(ingContent ing.Content) error {
 
 	trans, err := sqlite.Begin()
 	if err != nil {
-		trans.Rollback()
 		return errors.New("begin trans error: " + err.Error())
 	}
+	//http://go-database-sql.org/prepared.html
+	defer trans.Rollback()
 	//Content
 	stmt, err := sqlite.Prepare("select `Status` from `Ing` where IngID = ?")
 	if err != nil {
-		trans.Rollback()
 		return errors.New("prepare select IngStatus error: " + err.Error())
 	}
 	defer stmt.Close()
@@ -118,7 +118,6 @@ func InsertIngToDB(ingContent ing.Content) error {
 		sqlIngContent := "insert into `Ing` (`IngID`, `AuthorID`, `AuthorUserName`, `AuthorNickName`, `Time`, `Status`, `Lucky`, `IsPrivate`, `IsNewbie`, `AcquiredAt`, `Body`) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"
 		stmt, err = trans.Prepare(sqlIngContent)
 		if err != nil {
-			trans.Rollback()
 			return errors.New("prepare ing sql error: " + err.Error())
 		}
 		defer stmt.Close()
@@ -126,12 +125,9 @@ func InsertIngToDB(ingContent ing.Content) error {
 			ingContent.Time, ingContent.Status, ingContent.Lucky, ingContent.IsPrivate, ingContent.IsNewbie,
 			ingContent.AcquiredAt, ingContent.Body)
 		if err != nil {
-			fmt.Println("err", err)
-			trans.Rollback()
 			return errors.New("insert ing table error: " + err.Error())
 		}
 	} else if err != nil {
-		trans.Rollback()
 		return errors.New("scan ingStatus error: " + err.Error())
 	}
 	if ingStatus == 404 {
@@ -143,13 +139,11 @@ func InsertIngToDB(ingContent ing.Content) error {
 		sqlIngUpdate := "update `Ing` set `Status` = 404 where `IngID` = ?"
 		stmt, err = trans.Prepare(sqlIngUpdate)
 		if err != nil {
-			trans.Rollback()
 			return errors.New("prepare update status sql error: " + err.Error())
 		}
 		defer stmt.Close()
 		_, err := stmt.Exec(ingContent.IngID)
 		if err != nil {
-			trans.Rollback()
 			return errors.New("update ing Status error: " + err.Error())
 		}
 		trans.Commit()
@@ -158,13 +152,11 @@ func InsertIngToDB(ingContent ing.Content) error {
 	//Comments
 	stmt, err = sqlite.Prepare("select ID, CommentID from Comment where IngID = ? and IsDelete = 0")
 	if err != nil {
-		trans.Rollback()
 		return errors.New("prepare select CommentID error: " + err.Error())
 	}
 	defer stmt.Close()
 	rows, err := stmt.Query(ingContent.IngID)
 	if err != nil {
-		trans.Rollback()
 		return errors.New("get CommentID error: " + err.Error())
 	}
 	defer rows.Close()
@@ -175,7 +167,6 @@ func InsertIngToDB(ingContent ing.Content) error {
 		var commentID string
 		err = rows.Scan(&ID, &commentID)
 		if err != nil {
-			trans.Rollback()
 			return errors.New("get commentID error: " + err.Error())
 		}
 		unDeletedCommentIDs = append(unDeletedCommentIDs, commentID)
@@ -184,7 +175,6 @@ func InsertIngToDB(ingContent ing.Content) error {
 	sqlIngComment := "insert into `Comment` (`IngID`, `CommentID`, `AuthorID`, `AuthorUserName`, `AuthorNickName`, `Body`, `Time`, `IsDelete`) values (?, ?, ?, ?, ?, ?, ?, ?);"
 	stmt, err = trans.Prepare(sqlIngComment)
 	if err != nil {
-		trans.Rollback()
 		return errors.New("prepare insert ingComment sql error: " + err.Error())
 	}
 	defer stmt.Close()
@@ -204,7 +194,6 @@ func InsertIngToDB(ingContent ing.Content) error {
 		_, err = stmt.Exec(ingComment.IngID, ingComment.CommentID, ingComment.AuthorID, ingComment.AuthorUserName, ingComment.AuthorNickName,
 			ingComment.Body, ingComment.Time, ingComment.IsDelete)
 		if err != nil {
-			trans.Rollback()
 			return errors.New("insert comment error: " + err.Error())
 		}
 		if !commentUpdated {
@@ -216,12 +205,10 @@ func InsertIngToDB(ingContent ing.Content) error {
 	sqlIngCommentUpdate := "update `Comment` set IsDelete = 1 where IngID = ? and CommentID = ?"
 	stmt, err = trans.Prepare(sqlIngCommentUpdate)
 	if err != nil {
-		trans.Rollback()
 		return errors.New("prepare update set IsDelete sql error: " + err.Error())
 	}
 	defer stmt.Close()
 	if err != nil {
-		trans.Rollback()
 		return errors.New("prepare delete sql error: " + err.Error())
 	}
 	for _, willDeletedCommentID := range unDeletedCommentIDs {
@@ -233,7 +220,6 @@ func InsertIngToDB(ingContent ing.Content) error {
 		}
 		_, err = stmt.Exec(ingContent.IngID, willDeletedCommentID)
 		if err != nil {
-			trans.Rollback()
 			return errors.New("update Comment IsDelete flag error: " + err.Error())
 		}
 	}
@@ -241,13 +227,11 @@ func InsertIngToDB(ingContent ing.Content) error {
 		sqlStmt := "update `Ing` set `AcquiredAt` = ? where `IngID` = ?"
 		stmt, err = trans.Prepare(sqlStmt)
 		if err != nil {
-			trans.Rollback()
 			return errors.New("prepare ing AcquiredAt error: " + err.Error())
 		}
 		defer stmt.Close()
 		_, err := stmt.Exec(ingContent.AcquiredAt, ingContent.IngID)
 		if err != nil {
-			trans.Rollback()
 			return errors.New("update ing AcquiredAt error: " + err.Error())
 		}
 	}
@@ -262,6 +246,13 @@ func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
 		return errors.New("open origin db error:" + err.Error())
 	}
 	defer originDB.Close()
+	/*
+		err = originDB.Ping()
+		if err != nil {
+			// do something here
+		}
+	*/
+	originDB.SetMaxOpenConns(1)
 	md5Hash := md5String(originContent.HTML)
 	var htmlHash string
 	err = originDB.QueryRow("select `HTMLHash` from `OriginIng` where `IngID` = ? and `HTMLHash` = ?",
