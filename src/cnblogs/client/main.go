@@ -257,19 +257,33 @@ func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
 	originDB.SetMaxOpenConns(1)
 	md5Hash := md5String(originContent.HTML)
 	var htmlHash string
-	err = originDB.QueryRow("select `HTMLHash` from `OriginIng` where `IngID` = ? and `HTMLHash` = ?",
-		ingID, md5Hash).Scan(&htmlHash)
-	if err != nil && err != sql.ErrNoRows {
-		return errors.New("scan htmlHash error: " + err.Error())
+	//if error is database is locked repeat 10 times
+	for i := 0; i < 10; i++ {
+		err = originDB.QueryRow("select `HTMLHash` from `OriginIng` where `IngID` = ? and `HTMLHash` = ?",
+			ingID, md5Hash).Scan(&htmlHash)
+		if err != nil {
+			if err != sql.ErrNoRows {
+				break
+			}
+			if err.Error() == "database is locked" {
+				fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i+1))
+				time.Sleep(time.Millisecond * 100)
+				continue
+			}
+			return errors.New("scan htmlHash error: " + err.Error())
+		}
+		break
 	}
 
 	if htmlHash == "" || err == sql.ErrNoRows {
 		sqlIngOriginContent := "insert into OriginIng (IngID, Status, AcquiredAt, Exception, HTMLHash, HTML) values (?, ?, ?, ?, ?, ?);"
-		for {
+		//if error is database is locked repeat 10 times
+		for i := 0; i < 10; i++ {
 			_, err := originDB.Exec(sqlIngOriginContent, originContent.IngID, originContent.Status, originContent.AcquiredAt,
 				originContent.Exception, md5Hash, originContent.HTML)
 			if err != nil {
 				if err.Error() == "database is locked" {
+					fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i+1))
 					time.Sleep(time.Millisecond * 100)
 					continue
 				}
