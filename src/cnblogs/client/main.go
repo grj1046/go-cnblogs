@@ -267,7 +267,7 @@ func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
 				break
 			}
 			if err.Error() == "database is locked" {
-				fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i+1))
+				fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i+1) + " IngID: " + originContent.IngID)
 				time.Sleep(time.Millisecond * 100)
 				continue
 			}
@@ -284,7 +284,7 @@ func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
 				originContent.Exception, md5Hash, originContent.HTML)
 			if err != nil {
 				if err.Error() == "database is locked" {
-					fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i+1))
+					fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i+1) + " IngID: " + originContent.IngID)
 					time.Sleep(time.Millisecond * 100)
 					continue
 				}
