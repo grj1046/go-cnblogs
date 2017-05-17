@@ -11,6 +11,8 @@ import (
 	"os"
 	"strconv"
 
+	"time"
+
 	"github.com/robfig/cron"
 )
 
@@ -263,10 +265,17 @@ func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
 
 	if htmlHash == "" || err == sql.ErrNoRows {
 		sqlIngOriginContent := "insert into OriginIng (IngID, Status, AcquiredAt, Exception, HTMLHash, HTML) values (?, ?, ?, ?, ?, ?);"
-		_, err := originDB.Exec(sqlIngOriginContent, originContent.IngID, originContent.Status, originContent.AcquiredAt,
-			originContent.Exception, md5Hash, originContent.HTML)
-		if err != nil {
-			return errors.New("insert OriginContent error: " + err.Error())
+		for {
+			_, err := originDB.Exec(sqlIngOriginContent, originContent.IngID, originContent.Status, originContent.AcquiredAt,
+				originContent.Exception, md5Hash, originContent.HTML)
+			if err != nil {
+				if err.Error() == "database is locked" {
+					time.Sleep(time.Millisecond * 100)
+					continue
+				}
+				return errors.New("insert OriginContent error: " + err.Error())
+			}
+			break
 		}
 		/*
 			id, err := result.LastInsertId()
