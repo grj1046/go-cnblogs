@@ -262,7 +262,8 @@ func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
 		err = originDB.QueryRow("select `HTMLHash` from `OriginIng` where `IngID` = ? and `HTMLHash` = ?",
 			ingID, md5Hash).Scan(&htmlHash)
 		if err != nil {
-			if err != sql.ErrNoRows {
+			if err == sql.ErrNoRows {
+				//sql: no rows in result set
 				break
 			}
 			if err.Error() == "database is locked" {
