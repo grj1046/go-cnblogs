@@ -92,19 +92,26 @@ func GetIngAndSaveToDB(ingID int) error {
 
 //InsertIngToDB Insert or update Ing To sqlite3 db
 func InsertIngToDB(ingContent ing.Content) error {
-	/*
-		//OriginContent , originContent ing.OriginContent
-		err := InsertToOriginDB(ingContent.IngID, originContent)
-		if err != nil {
-			return err
-		}
-	*/
 	sqlite, err := db.GetDB()
 	if err != nil {
 		return errors.New("open db error: " + err.Error())
 	}
 	defer sqlite.Close()
 
+	//if error is database is locked repeat 10 times
+	for i := 1; i <= 10; i++ {
+		err = sqlite.Ping()
+		if err != nil {
+			if err.Error() == "database is locked" {
+				fmt.Println("Ping occur occured database is locked, try times:" + strconv.Itoa(i) +
+					" IngID: " + strconv.Itoa(ingContent.IngID))
+				time.Sleep(time.Millisecond * 100)
+				continue
+			}
+			return errors.New("Ping error: " + err.Error())
+		}
+		break
+	}
 	trans, err := sqlite.Begin()
 	if err != nil {
 		return errors.New("begin trans error: " + err.Error())
@@ -112,7 +119,7 @@ func InsertIngToDB(ingContent ing.Content) error {
 	//http://go-database-sql.org/prepared.html
 	defer trans.Rollback()
 	//Content
-	stmt, err := sqlite.Prepare("select `Status` from `Ing` where IngID = ?")
+	stmt, err := trans.Prepare("select `Status` from `Ing` where IngID = ?")
 	if err != nil {
 		return errors.New("prepare select IngStatus error: " + err.Error())
 	}
@@ -157,7 +164,7 @@ func InsertIngToDB(ingContent ing.Content) error {
 		return nil
 	}
 	//Comments
-	stmt, err = sqlite.Prepare("select ID, CommentID from Comment where IngID = ? and IsDelete = 0")
+	stmt, err = trans.Prepare("select ID, CommentID from Comment where IngID = ? and IsDelete = 0")
 	if err != nil {
 		return errors.New("prepare select CommentID error: " + err.Error())
 	}
@@ -263,7 +270,7 @@ func InsertToOriginDB(ingID int, originContent ing.OriginContent) error {
 	md5Hash := md5String(originContent.HTML)
 	var htmlHash string
 	//if error is database is locked repeat 10 times
-	for i := 0; i < 10; i++ {
+	for i := 1; i <= 10; i++ {
 		err = originDB.QueryRow("select `HTMLHash` from `OriginIng` where `IngID` = ? and `HTMLHash` = ?",
 			ingID, md5Hash).Scan(&htmlHash)
 		if err != nil {
@@ -272,7 +279,7 @@ func InsertToOriginDB(ingID int, originContent ing.OriginContent) error {
 				break
 			}
 			if err.Error() == "database is locked" {
-				fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i+1) + " IngID: " + strconv.Itoa(originContent.IngID))
+				fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i) + " IngID: " + strconv.Itoa(originContent.IngID))
 				time.Sleep(time.Millisecond * 100)
 				continue
 			}
@@ -284,12 +291,12 @@ func InsertToOriginDB(ingID int, originContent ing.OriginContent) error {
 	if htmlHash == "" || err == sql.ErrNoRows {
 		sqlIngOriginContent := "insert into OriginIng (IngID, Status, AcquiredAt, Exception, HTMLHash, HTML) values (?, ?, ?, ?, ?, ?);"
 		//if error is database is locked repeat 10 times
-		for i := 0; i < 10; i++ {
+		for i := 1; i <= 10; i++ {
 			_, err := originDB.Exec(sqlIngOriginContent, originContent.IngID, originContent.Status, originContent.AcquiredAt,
 				originContent.Exception, md5Hash, originContent.HTML)
 			if err != nil {
 				if err.Error() == "database is locked" {
-					fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i+1) + " IngID: " + strconv.Itoa(originContent.IngID))
+					fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i) + " IngID: " + strconv.Itoa(originContent.IngID))
 					time.Sleep(time.Millisecond * 100)
 					continue
 				}
