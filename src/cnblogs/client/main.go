@@ -46,6 +46,7 @@ func Main(conf conf.Conf) {
 			c.Stop()
 			return
 		}
+
 		currentIngID := ingID
 		ingID++
 		fmt.Println("currentIngID", currentIngID)
@@ -56,6 +57,9 @@ func Main(conf conf.Conf) {
 		}
 	})
 	c.Start()
+	if !conf.EnableSite {
+		select {}
+	}
 }
 
 //GetIngAndSaveToDB Get Ing Cotnent by IngID and save it to sqlite database
@@ -76,11 +80,11 @@ func GetIngAndSaveToDB(ingID int) error {
 	//go call(*ingContent, *originContent)
 	err = InsertToOriginDB(ingContent.IngID, *originContent)
 	if err != nil {
-		return errors.New("Insert OriginIngInfo Error: " + err.Error())
+		return errors.New("InsertToOriginDB: " + err.Error())
 	}
 	err = InsertIngToDB(*ingContent)
 	if err != nil {
-		return errors.New("Insert IngInfo Error: " + err.Error())
+		return errors.New("InsertIngToDB: " + err.Error())
 	}
 	return nil
 }
@@ -136,7 +140,6 @@ func InsertIngToDB(ingContent ing.Content) error {
 		if err != nil {
 			return errors.New("insert ing table error: " + err.Error())
 		}
-		fmt.Println("insert " + strconv.Itoa(ingContent.IngID))
 	} else if err != nil {
 		return errors.New("scan ingStatus error: " + err.Error())
 	}

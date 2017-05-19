@@ -8,10 +8,12 @@ import (
 
 //Conf config.json
 type Conf struct {
-	StartIngID int
-	EndIngID   int
-	HTTPPort   int
-	AuthCookie string
+	EnableCollector bool
+	EnableSite      bool
+	StartIngID      int
+	EndIngID        int
+	HTTPPort        int
+	AuthCookie      string
 }
 
 //ReadConf convert config.json file to conf struct

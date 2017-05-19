@@ -8,6 +8,10 @@ import (
 
 func main() {
 	conf := conf.ReadConf()
-	client.Main(conf)
-	site.Main(conf)
+	if conf.EnableCollector {
+		client.Main(conf)
+	}
+	if conf.EnableSite {
+		site.Main(conf)
+	}
 }

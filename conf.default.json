@@ -1,4 +1,6 @@
 {
+    "enableCollector": true,
+    "enableSite": false,
     "startIngID": 1,
     "endIngID": 11,
     "httpPort": 8080,
