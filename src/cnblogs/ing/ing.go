@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,7 +21,7 @@ type Client struct {
 
 //Content ing Content struct
 type Content struct {
-	IngID          string
+	IngID          int
 	AuthorID       string
 	AuthorUserName string
 	AuthorNickName string
@@ -36,7 +37,7 @@ type Content struct {
 
 //Comment Ing.Content's Comment
 type Comment struct {
-	IngID          string
+	IngID          int
 	CommentID      string
 	AuthorID       string
 	AuthorUserName string
@@ -48,7 +49,7 @@ type Comment struct {
 
 //OriginContent store the origin ing html
 type OriginContent struct {
-	IngID      string
+	IngID      int
 	Status     int //200 404
 	AcquiredAt time.Time
 	Exception  string
@@ -62,10 +63,10 @@ func (client *Client) Init(authCookie string) {
 }
 
 //GetIngByID Get Ing Html Document by ingID
-func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error) {
+func (client *Client) GetIngByID(ingID int) (*Content, *OriginContent, error) {
 	//urlStr := "https://ing.cnblogs.com/u/grj1046/status/" + strconv.Itoa(ingID) + "/"
 	//http://home.cnblogs.com/ing/1115171/
-	urlStr := "https://ing.cnblogs.com/redirect/" + ingID + "/"
+	urlStr := "https://ing.cnblogs.com/redirect/" + strconv.Itoa(ingID) + "/"
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
 		return nil, nil, err
@@ -227,10 +228,10 @@ func (client *Client) GetIngByID(ingID string) (*Content, *OriginContent, error)
 		content.Body = ingBody
 	}
 
-	commentCount := doc.Find("#comment_block_" + ingID + " li").Length()
+	commentCount := doc.Find("#comment_block_" + strconv.Itoa(ingID) + " li").Length()
 	content.Comments = make([]Comment, commentCount)
 
-	doc.Find("#comment_block_" + ingID + " li").Each(func(index int, selection *goquery.Selection) {
+	doc.Find("#comment_block_" + strconv.Itoa(ingID) + " li").Each(func(index int, selection *goquery.Selection) {
 		//IngID, CommentID, Comment, CommentTime, AuthorID AuthorUserName, AuthorNickName
 		comment := &Comment{}
 		//IngID

@@ -18,10 +18,13 @@ import (
 
 //"github.com/PuerkitoBio/goquery"
 
+var conf Conf
+var ingClient *ing.Client
+
 //Main main function
 func Main() {
-	conf := ReadConf()
-	ingClient := &ing.Client{}
+	conf = ReadConf()
+	ingClient = &ing.Client{}
 	ingClient.Init(conf.AuthCookie)
 	err := db.InitialDB()
 	if err != nil {
@@ -40,49 +43,51 @@ func Main() {
 	spec := "*/1 * * * * *"
 	c.AddFunc(spec, func() {
 		//ingID++
-		currentIngID := strconv.Itoa(ingID)
-		fmt.Println("currentIngID", currentIngID)
-		//search if current Ing in table && ingStatus is 404, do nothing.
-		ingContent, originContent, err := ingClient.GetIngByID(currentIngID)
-		if err != nil {
-			fmt.Println("Get IngInfo Error: ", err)
-			os.Exit(1)
-		}
-		if ingID >= conf.EndIngID {
+		if ingID > conf.EndIngID {
 			fmt.Println("task finished")
 			c.Stop()
 			os.Exit(0)
 		}
+		fmt.Println("currentIngID", ingID)
+		err = GetIngAndSaveToDB(ingID)
+		if err != nil {
+			//maybe can log err to database
+			fmt.Println("IngID: ", ingID, "err: ", err)
+			os.Exit(1)
+		}
 		ingID++
-
-		if ingContent.Status == 403 {
-			fmt.Println("auth cookie invalid, please check.")
-			os.Exit(1)
-		}
-		//OriginContent
-		//go call(*ingContent, *originContent)
-		err = InsertToOriginDB(ingContent.IngID, *originContent)
-		if err != nil {
-			fmt.Println("Insert OriginIngInfo Error: ", err)
-			os.Exit(1)
-		}
-		//err = InsertIngToDB(*ingContent, *originContent)
-		err = InsertIngToDB(*ingContent)
-		if err != nil {
-			fmt.Println("Get IngInfo Error: ", err)
-			os.Exit(1)
-		}
 	})
 	c.Start()
 	select {} //阻塞主线程不退出
 }
 
-func call(ingContent ing.Content, originContent ing.OriginContent) {
-	err := InsertToOriginDB(ingContent.IngID, originContent)
-	if err != nil {
-		fmt.Println("Insert OriginIngInfo Error: ", err)
-		os.Exit(1)
+//GetIngAndSaveToDB Get Ing Cotnent by IngID and save it to sqlite database
+func GetIngAndSaveToDB(ingID int) error {
+	if ingClient == nil {
+		fmt.Println("init intClient in GetIngAndSaveToDB func")
+		ingClient = &ing.Client{}
+		ingClient.Init(conf.AuthCookie)
 	}
+	//search if current Ing in table && ingStatus is 404, do nothing.
+	ingContent, originContent, err := ingClient.GetIngByID(ingID)
+	if err != nil {
+		return errors.New("Get IngInfo Error: " + err.Error())
+	}
+
+	if ingContent.Status == 403 {
+		return errors.New("auth cookie invalid, please check")
+	}
+	//OriginContent
+	//go call(*ingContent, *originContent)
+	err = InsertToOriginDB(ingContent.IngID, *originContent)
+	if err != nil {
+		return errors.New("Insert OriginIngInfo Error: " + err.Error())
+	}
+	err = InsertIngToDB(*ingContent)
+	if err != nil {
+		return errors.New("Insert IngInfo Error: " + err.Error())
+	}
+	return nil
 }
 
 //InsertIngToDB Insert or update Ing To sqlite3 db
@@ -242,7 +247,7 @@ func InsertIngToDB(ingContent ing.Content) error {
 }
 
 //InsertToOriginDB store Origin Ing Info to seperator database
-func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
+func InsertToOriginDB(ingID int, originContent ing.OriginContent) error {
 	originDB, err := db.GetDBOrigin()
 	if err != nil {
 		return errors.New("open origin db error:" + err.Error())
@@ -267,7 +272,7 @@ func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
 				break
 			}
 			if err.Error() == "database is locked" {
-				fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i+1) + " IngID: " + originContent.IngID)
+				fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i+1) + " IngID: " + strconv.Itoa(originContent.IngID))
 				time.Sleep(time.Millisecond * 100)
 				continue
 			}
@@ -284,7 +289,7 @@ func InsertToOriginDB(ingID string, originContent ing.OriginContent) error {
 				originContent.Exception, md5Hash, originContent.HTML)
 			if err != nil {
 				if err.Error() == "database is locked" {
-					fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i+1) + " IngID: " + originContent.IngID)
+					fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i+1) + " IngID: " + strconv.Itoa(originContent.IngID))
 					time.Sleep(time.Millisecond * 100)
 					continue
 				}
