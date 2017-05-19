@@ -1,4 +1,4 @@
-package cnblogs
+package conf
 
 import (
 	"encoding/json"
@@ -10,6 +10,7 @@ import (
 type Conf struct {
 	StartIngID int
 	EndIngID   int
+	HTTPPort   int
 	AuthCookie string
 }
 

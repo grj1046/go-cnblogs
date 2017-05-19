@@ -1,6 +1,7 @@
-package cnblogs
+package client
 
 import (
+	"cnblogs/conf"
 	"cnblogs/db"
 	"cnblogs/ing"
 	"crypto/md5"
@@ -8,7 +9,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 
 	"time"
@@ -18,24 +18,22 @@ import (
 
 //"github.com/PuerkitoBio/goquery"
 
-var conf Conf
 var ingClient *ing.Client
 
 //Main main function
-func Main() {
-	conf = ReadConf()
+func Main(conf conf.Conf) {
 	ingClient = &ing.Client{}
 	ingClient.Init(conf.AuthCookie)
 	err := db.InitialDB()
 	if err != nil {
 		fmt.Println("Execute Sql Script Error: ", err)
-		os.Exit(1)
+		return
 	}
 	//http://home.cnblogs.com/ing/1115171/
 
 	if conf.StartIngID <= 0 || conf.EndIngID <= 0 || conf.EndIngID < conf.StartIngID {
 		fmt.Println("config startIngID or endIngID config error")
-		os.Exit(1)
+		return
 	}
 
 	ingID := conf.StartIngID
@@ -46,27 +44,24 @@ func Main() {
 		if ingID > conf.EndIngID {
 			fmt.Println("task finished")
 			c.Stop()
-			os.Exit(0)
+			return
 		}
-		fmt.Println("currentIngID", ingID)
-		err = GetIngAndSaveToDB(ingID)
+		currentIngID := ingID
+		ingID++
+		fmt.Println("currentIngID", currentIngID)
+		err = GetIngAndSaveToDB(currentIngID)
 		if err != nil {
 			//maybe can log err to database
-			fmt.Println("IngID: ", ingID, "err: ", err)
-			os.Exit(1)
+			fmt.Println("IngID: ", currentIngID, "err: ", err)
 		}
-		ingID++
 	})
 	c.Start()
-	select {} //阻塞主线程不退出
 }
 
 //GetIngAndSaveToDB Get Ing Cotnent by IngID and save it to sqlite database
 func GetIngAndSaveToDB(ingID int) error {
 	if ingClient == nil {
-		fmt.Println("init intClient in GetIngAndSaveToDB func")
-		ingClient = &ing.Client{}
-		ingClient.Init(conf.AuthCookie)
+		return errors.New("ingClient is not initial")
 	}
 	//search if current Ing in table && ingStatus is 404, do nothing.
 	ingContent, originContent, err := ingClient.GetIngByID(ingID)
@@ -141,6 +136,7 @@ func InsertIngToDB(ingContent ing.Content) error {
 		if err != nil {
 			return errors.New("insert ing table error: " + err.Error())
 		}
+		fmt.Println("insert " + strconv.Itoa(ingContent.IngID))
 	} else if err != nil {
 		return errors.New("scan ingStatus error: " + err.Error())
 	}
