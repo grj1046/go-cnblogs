@@ -104,7 +104,7 @@ func InsertIngToDB(ingContent ing.Content) error {
 			if err.Error() == "database is locked" {
 				fmt.Println("Ping occured database is locked, try times:" + strconv.Itoa(i) +
 					" IngID: " + strconv.Itoa(ingContent.IngID))
-				time.Sleep(time.Millisecond * 100)
+				time.Sleep(time.Millisecond * 500)
 				continue
 			}
 			return errors.New("Ping error: " + err.Error())
@@ -143,7 +143,7 @@ func InsertIngToDB(ingContent ing.Content) error {
 				if err.Error() == "database is locked" {
 					fmt.Println("insert ing table occured database is locked, try times:" + strconv.Itoa(i) +
 						" IngID: " + strconv.Itoa(ingContent.IngID))
-					time.Sleep(time.Millisecond * 100)
+					time.Sleep(time.Millisecond * 500)
 					continue
 				}
 				return errors.New("insert ing table error: " + err.Error())
@@ -289,7 +289,7 @@ func InsertToOriginDB(ingID int, originContent ing.OriginContent) error {
 			}
 			if err.Error() == "database is locked" {
 				fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i) + " IngID: " + strconv.Itoa(originContent.IngID))
-				time.Sleep(time.Millisecond * 100)
+				time.Sleep(time.Millisecond * 500)
 				continue
 			}
 			return errors.New("scan htmlHash error: " + err.Error())
@@ -306,7 +306,7 @@ func InsertToOriginDB(ingID int, originContent ing.OriginContent) error {
 			if err != nil {
 				if err.Error() == "database is locked" {
 					fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i) + " IngID: " + strconv.Itoa(originContent.IngID))
-					time.Sleep(time.Millisecond * 100)
+					time.Sleep(time.Millisecond * 500)
 					continue
 				}
 				return errors.New("insert OriginContent error: " + err.Error())
