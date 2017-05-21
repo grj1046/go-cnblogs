@@ -102,7 +102,7 @@ func InsertIngToDB(ingContent ing.Content) error {
 		err = sqlite.Ping()
 		if err != nil {
 			if err.Error() == "database is locked" {
-				fmt.Println("Ping occur occured database is locked, try times:" + strconv.Itoa(i) +
+				fmt.Println("Ping occured database is locked, try times:" + strconv.Itoa(i) +
 					" IngID: " + strconv.Itoa(ingContent.IngID))
 				time.Sleep(time.Millisecond * 100)
 				continue
@@ -134,11 +134,21 @@ func InsertIngToDB(ingContent ing.Content) error {
 			return errors.New("prepare ing sql error: " + err.Error())
 		}
 		defer stmt.Close()
-		_, err = stmt.Exec(ingContent.IngID, ingContent.AuthorID, ingContent.AuthorUserName, ingContent.AuthorNickName,
-			ingContent.Time, ingContent.Status, ingContent.Lucky, ingContent.IsPrivate, ingContent.IsNewbie,
-			ingContent.AcquiredAt, ingContent.Body)
-		if err != nil {
-			return errors.New("insert ing table error: " + err.Error())
+		//if error is database is locked repeat 10 times
+		for i := 1; i <= 10; i++ {
+			_, err = stmt.Exec(ingContent.IngID, ingContent.AuthorID, ingContent.AuthorUserName, ingContent.AuthorNickName,
+				ingContent.Time, ingContent.Status, ingContent.Lucky, ingContent.IsPrivate, ingContent.IsNewbie,
+				ingContent.AcquiredAt, ingContent.Body)
+			if err != nil {
+				if err.Error() == "database is locked" {
+					fmt.Println("insert ing table occured database is locked, try times:" + strconv.Itoa(i) +
+						" IngID: " + strconv.Itoa(ingContent.IngID))
+					time.Sleep(time.Millisecond * 100)
+					continue
+				}
+				return errors.New("insert ing table error: " + err.Error())
+			}
+			break
 		}
 	} else if err != nil {
 		return errors.New("scan ingStatus error: " + err.Error())
