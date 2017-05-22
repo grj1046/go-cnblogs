@@ -13,7 +13,6 @@ import (
 
 	"time"
 
-	"github.com/robfig/cron"
 )
 
 //"github.com/PuerkitoBio/goquery"
@@ -36,30 +35,16 @@ func Main(conf conf.Conf) {
 		return
 	}
 
-	ingID := conf.StartIngID
-	c := cron.New()
-	spec := "*/1 * * * * *"
-	c.AddFunc(spec, func() {
-		//ingID++
-		if ingID > conf.EndIngID {
-			fmt.Println("task finished")
-			c.Stop()
-			return
-		}
-
-		currentIngID := ingID
-		ingID++
-		fmt.Println("currentIngID", currentIngID)
-		err = GetIngAndSaveToDB(currentIngID)
-		if err != nil {
-			//maybe can log err to database
-			fmt.Println("IngID: ", currentIngID, "err: ", err)
-		}
-	})
-	c.Start()
-	if !conf.EnableSite {
-		select {}
-	}
+        for i:=conf.StartIngID; i <= conf.EndIngID; i++ {
+            currentIngID :=i 
+	    fmt.Println("currentIngID", currentIngID)
+	    err = GetIngAndSaveToDB(currentIngID)
+	    if err != nil {
+		//maybe can log err to database
+		fmt.Println("IngID: ", currentIngID, "err: ", err)
+	    }
+        }
+        fmt.Println("task finished")
 }
 
 //GetIngAndSaveToDB Get Ing Cotnent by IngID and save it to sqlite database

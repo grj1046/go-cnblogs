@@ -9,8 +9,8 @@ import (
 )
 
 //cache=shared&mode=rwc&_busy_timeout=3000
-var dbPath = "./data/cnblogs.db?_busy_timeout=30000"
-var dbPathOrigin = "./data/cnblogs_origin.db?_busy_timeout=30000"
+var dbPath = "./data/cnblogs.db?_busy_timeout=3000"
+var dbPathOrigin = "./data/cnblogs_origin.db?_busy_timeout=3000"
 
 //GetDB Get Sqlite database instance
 func GetDB() (*sql.DB, error) {
