@@ -8,14 +8,11 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
-	"fmt"
+	"log"
 	"strconv"
 
 	"time"
-
 )
-
-//"github.com/PuerkitoBio/goquery"
 
 var ingClient *ing.Client
 
@@ -25,26 +22,47 @@ func Main(conf conf.Conf) {
 	ingClient.Init(conf.AuthCookie)
 	err := db.InitialDB()
 	if err != nil {
-		fmt.Println("Execute Sql Script Error: ", err)
+		log.Println("Execute Sql Script Error: ", err)
 		return
 	}
 	//http://home.cnblogs.com/ing/1115171/
 
 	if conf.StartIngID <= 0 || conf.EndIngID <= 0 || conf.EndIngID < conf.StartIngID {
-		fmt.Println("config startIngID or endIngID config error")
+		log.Println("config startIngID or endIngID config error")
 		return
 	}
 
-        for i:=conf.StartIngID; i <= conf.EndIngID; i++ {
-            currentIngID :=i 
-	    fmt.Println("currentIngID", currentIngID)
-	    err = GetIngAndSaveToDB(currentIngID)
-	    if err != nil {
-		//maybe can log err to database
-		fmt.Println("IngID: ", currentIngID, "err: ", err)
-	    }
-        }
-        fmt.Println("task finished")
+	for i := conf.StartIngID; i <= conf.EndIngID; i++ {
+		currentIngID := i
+		log.Println("currentIngID", currentIngID)
+		err = GetIngAndSaveToDB(currentIngID)
+		if err != nil {
+			//maybe can log err to database
+			log.Println("IngID: ", currentIngID, "err: ", err)
+		}
+	}
+	log.Println("task finished")
+}
+
+//LeakFinding check if ingID not in database, update it.
+func LeakFinding(ingID int) error {
+	sqlite, err := db.GetDB()
+	if err != nil {
+		return errors.New("open db error: " + err.Error())
+	}
+	defer sqlite.Close()
+
+	row := sqlite.QueryRow("select `Status` from `Ing` where IngID = ?", ingID)
+	var ingStatus int
+	err = row.Scan(&ingStatus)
+
+	if ingStatus == 0 || err == sql.ErrNoRows {
+		err = GetIngAndSaveToDB(ingID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 //GetIngAndSaveToDB Get Ing Cotnent by IngID and save it to sqlite database
@@ -52,6 +70,7 @@ func GetIngAndSaveToDB(ingID int) error {
 	if ingClient == nil {
 		return errors.New("ingClient is not initial")
 	}
+	log.Println("Get IngContent", ingID)
 	//search if current Ing in table && ingStatus is 404, do nothing.
 	ingContent, originContent, err := ingClient.GetIngByID(ingID)
 	if err != nil {
@@ -63,10 +82,12 @@ func GetIngAndSaveToDB(ingID int) error {
 	}
 	//OriginContent
 	//go call(*ingContent, *originContent)
+	log.Println("InsertToOriginDB", ingID)
 	err = InsertToOriginDB(ingContent.IngID, *originContent)
 	if err != nil {
 		return errors.New("InsertToOriginDB: " + err.Error())
 	}
+	log.Println("InsertIngToDB", ingID)
 	err = InsertIngToDB(*ingContent)
 	if err != nil {
 		return errors.New("InsertIngToDB: " + err.Error())
@@ -87,7 +108,7 @@ func InsertIngToDB(ingContent ing.Content) error {
 		err = sqlite.Ping()
 		if err != nil {
 			if err.Error() == "database is locked" {
-				fmt.Println("Ping occured database is locked, try times:" + strconv.Itoa(i) +
+				log.Println("Ping occured database is locked, try times:" + strconv.Itoa(i) +
 					" IngID: " + strconv.Itoa(ingContent.IngID))
 				time.Sleep(time.Millisecond * 500)
 				continue
@@ -126,7 +147,7 @@ func InsertIngToDB(ingContent ing.Content) error {
 				ingContent.AcquiredAt, ingContent.Body)
 			if err != nil {
 				if err.Error() == "database is locked" {
-					fmt.Println("insert ing table occured database is locked, try times:" + strconv.Itoa(i) +
+					log.Println("insert ing table occured database is locked, try times:" + strconv.Itoa(i) +
 						" IngID: " + strconv.Itoa(ingContent.IngID))
 					time.Sleep(time.Millisecond * 500)
 					continue
@@ -273,7 +294,7 @@ func InsertToOriginDB(ingID int, originContent ing.OriginContent) error {
 				break
 			}
 			if err.Error() == "database is locked" {
-				fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i) + " IngID: " + strconv.Itoa(originContent.IngID))
+				log.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i) + " IngID: " + strconv.Itoa(originContent.IngID))
 				time.Sleep(time.Millisecond * 500)
 				continue
 			}
@@ -290,7 +311,7 @@ func InsertToOriginDB(ingID int, originContent ing.OriginContent) error {
 				originContent.Exception, md5Hash, originContent.HTML)
 			if err != nil {
 				if err.Error() == "database is locked" {
-					fmt.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i) + " IngID: " + strconv.Itoa(originContent.IngID))
+					log.Println("scan htmlHash occured database is locked, try times:" + strconv.Itoa(i) + " IngID: " + strconv.Itoa(originContent.IngID))
 					time.Sleep(time.Millisecond * 500)
 					continue
 				}
@@ -303,7 +324,7 @@ func InsertToOriginDB(ingID int, originContent ing.OriginContent) error {
 			if err != nil {
 				return errors.New("get LastInsertId error: " + err.Error())
 			}
-			fmt.Println("id", id)
+			log.Println("id", id)
 		*/
 	}
 	return nil
