@@ -57,6 +57,7 @@ func LeakFinding(ingID int) error {
 	err = row.Scan(&ingStatus)
 
 	if ingStatus == 0 || err == sql.ErrNoRows {
+		log.Println("Current IngID Not Exist In db, Update it. ", ingID)
 		err = GetIngAndSaveToDB(ingID)
 		if err != nil {
 			return err

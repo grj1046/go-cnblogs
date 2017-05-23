@@ -10,3 +10,9 @@ go get github.com/PuerkitoBio/goquery
 go get github.com/mattn/go-sqlite3
 go get github.com/robfig/cron
 ```
+
+
+```sql
+CREATE INDEX index_IngID ON OriginIng(IngID);
+CREATE INDEX index_IngID_HTMLHash ON OriginIng(IngID, HTMLHash);
+```
