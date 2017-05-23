@@ -157,7 +157,7 @@ func (client *Client) GetIngByID(ingID int) (*Content, *OriginContent, error) {
 			}
 		} else {
 			tmplen := len("https://pic.cnblogs.com/face/")
-			if strings.LastIndex(authorID, "/") != -1 {
+			if strings.LastIndex(authorID, "/") > tmplen {
 				authorID = authorID[tmplen:strings.LastIndex(authorID, "/")]
 			} else {
 				originContent.Exception += " get AuthorID failed: (face)" + authorID
