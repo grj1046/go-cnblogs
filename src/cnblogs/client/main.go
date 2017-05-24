@@ -71,7 +71,6 @@ func GetIngAndSaveToDB(ingID int) error {
 	if ingClient == nil {
 		return errors.New("ingClient is not initial")
 	}
-	log.Println("Get IngContent", ingID)
 	//search if current Ing in table && ingStatus is 404, do nothing.
 	ingContent, originContent, err := ingClient.GetIngByID(ingID)
 	if err != nil {
@@ -83,12 +82,10 @@ func GetIngAndSaveToDB(ingID int) error {
 	}
 	//OriginContent
 	//go call(*ingContent, *originContent)
-	log.Println("InsertToOriginDB", ingID)
 	err = InsertToOriginDB(ingContent.IngID, *originContent)
 	if err != nil {
 		return errors.New("InsertToOriginDB: " + err.Error())
 	}
-	log.Println("InsertIngToDB", ingID)
 	err = InsertIngToDB(*ingContent)
 	if err != nil {
 		return errors.New("InsertIngToDB: " + err.Error())
