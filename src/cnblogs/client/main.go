@@ -26,22 +26,25 @@ func Main(conf conf.Conf) {
 		return
 	}
 	//http://home.cnblogs.com/ing/1115171/
-
-	if conf.StartIngID <= 0 || conf.EndIngID <= 0 || conf.EndIngID < conf.StartIngID {
-		log.Println("config startIngID or endIngID config error")
-		return
-	}
-
-	for i := conf.StartIngID; i <= conf.EndIngID; i++ {
-		currentIngID := i
-		log.Println("currentIngID", currentIngID)
-		err = GetIngAndSaveToDB(currentIngID)
-		if err != nil {
-			//maybe can log err to database
-			log.Println("IngID: ", currentIngID, "err: ", err)
+	go func() {
+		for {
+			err = TaskSyncLatestIngToDB()
+			if err != nil {
+				log.Println("TaskSyncLatestIngToDB", err)
+			}
+			time.Sleep(time.Second * 30)
 		}
-	}
-	log.Println("task finished")
+	}()
+
+	go func() {
+		log.Println("run TaskSyncLatestCommentToDB")
+		pageSize := 30
+		err = TaskSyncLatestCommentToDB(pageSize)
+		if err != nil {
+			log.Println("TaskSyncLatestCommentToDB", err)
+		}
+		time.Sleep(time.Second * 10)
+	}()
 }
 
 //LeakFinding check if ingID not in database, update it.
@@ -61,6 +64,59 @@ func LeakFinding(ingID int) error {
 		err = GetIngAndSaveToDB(ingID)
 		if err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+//TaskSyncLatestIngToDB Sync latest Ing to Database
+func TaskSyncLatestIngToDB() error {
+	if ingClient == nil {
+		return errors.New("ingClient is not initial")
+	}
+	maxIngID, err := ingClient.GetMaxIngID()
+	if err != nil {
+		return err
+	}
+	sqlite, err := db.GetDB()
+	if err != nil {
+		return errors.New("open db error: " + err.Error())
+	}
+	defer sqlite.Close()
+	var currIngID int
+	err = sqlite.QueryRow("select IngID from Ing order by IngID desc limit 1").Scan(&currIngID)
+	if err != nil {
+		return err
+	}
+	log.Println("maxIngID", maxIngID, "currIngID", currIngID)
+	for i := currIngID; i <= maxIngID; i++ {
+		log.Println("Sync Ing", i)
+		err = GetIngAndSaveToDB(i)
+		if err != nil {
+			return errors.New(strconv.Itoa(i) + err.Error())
+		}
+	}
+	return nil
+}
+
+//TaskSyncLatestCommentToDB sync latest comment to database
+func TaskSyncLatestCommentToDB(pageSize int) error {
+	if ingClient == nil {
+		return errors.New("ingClient is not initial")
+	}
+
+	ingList, err := ingClient.GetLatestIngFromComment(pageSize)
+	if err != nil {
+		log.Println("GetLatestIngFromComment", err)
+	}
+	for i := 0; i < pageSize; i++ {
+		var currIngID = ingList[i]
+		if currIngID > 0 {
+			log.Println("Sync Ing Comment", i)
+			err = GetIngAndSaveToDB(currIngID)
+			if err != nil {
+				return errors.New(strconv.Itoa(i) + err.Error())
+			}
 		}
 	}
 	return nil

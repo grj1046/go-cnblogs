@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
 	"github.com/PuerkitoBio/goquery"
 )
 
@@ -343,6 +345,85 @@ func (client *Client) GetIngByID(ingID int) (*Content, *OriginContent, error) {
 		//printToConsole("comment => ", comment)
 	})
 	return content, originContent, nil
+}
+
+//GetLatestIngList get the latest ingList
+//https://ing.cnblogs.com/ajax/ing/GetIngList?IngListType=all&PageIndex=1&PageSize=30&Tag=&_=1495616106104
+func (client *Client) GetMaxIngID() (int, error) {
+	urlStr := "https://ing.cnblogs.com/ajax/ing/GetIngList?IngListType=all&PageIndex=1&PageSize=1&Tag=&_=" + strconv.FormatInt(time.Now().Unix(), 10)
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return 0, err
+	}
+	//req.Header.Add("Accept", "text/plain, */*; q=0.01")
+	req.Header.Add("Cookie", client.authCookie)
+	//req.Header.Add("Referer", "https://ing.cnblogs.com/")
+	//req.Header.Add("Host", "ing.cnblogs.com")
+	//req.Header.Add("Content-Type", "application/json; charset=utf-8")
+	req.Header.Add("X-Requested-With", "XMLHttpRequest")
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return 0, errors.New("Response StatusCode" + strconv.Itoa(resp.StatusCode))
+	}
+	doc, err := goquery.NewDocumentFromResponse(resp)
+	if err != nil {
+		return 0, err
+	}
+
+	maxIngID := doc.Find("#max_ing_id").Text()
+	intMaxIngID, err := strconv.Atoi(maxIngID)
+	if err != nil {
+		return 0, err
+	}
+	return intMaxIngID, nil
+}
+
+//GetLatestIngFromComment get the latest ing's comment list ingID
+//https://ing.cnblogs.com/ajax/ing/GetIngList?IngListType=recentcomment&PageIndex=1&PageSize=30&Tag=&_=1495616250086
+func (client *Client) GetLatestIngFromComment(pageSize int) ([]int, error) {
+	if pageSize <= 0 {
+		pageSize = 30
+	}
+	urlStr := "https://ing.cnblogs.com/ajax/ing/GetIngList?IngListType=recentcomment&PageIndex=1&" + strconv.Itoa(pageSize) +
+		"=1&Tag=&_=" + strconv.FormatInt(time.Now().Unix(), 10)
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Cookie", client.authCookie)
+	req.Header.Add("X-Requested-With", "XMLHttpRequest")
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, errors.New("Response StatusCode" + strconv.Itoa(resp.StatusCode))
+	}
+	doc, err := goquery.NewDocumentFromResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	ingList := make([]int, pageSize)
+
+	doc.Find("#feed_list ul li").Each(func(index int, selection *goquery.Selection) {
+		attrID, exists := selection.Find(".ing_body").Attr("id")
+		if exists {
+			tmpLen := len("ing_body_")
+			intVal, err := strconv.Atoi(attrID[tmpLen:])
+			if err != nil {
+				ingList[index] = intVal
+			}
+		}
+	})
+	return ingList, nil
 }
 
 func printToConsole(str string, v interface{}) {

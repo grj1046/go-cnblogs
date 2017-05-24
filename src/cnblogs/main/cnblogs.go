@@ -8,7 +8,7 @@ import (
 
 func main() {
 	conf := conf.ReadConf()
-	if conf.EnableCollector {
+	if conf.AutoStartTask {
 		client.Main(conf)
 	}
 	if conf.EnableSite {

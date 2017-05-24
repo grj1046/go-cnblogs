@@ -8,12 +8,12 @@ import (
 
 //Conf config.json
 type Conf struct {
-	EnableCollector bool
-	EnableSite      bool
-	StartIngID      int
-	EndIngID        int
-	HTTPPort        int
-	AuthCookie      string
+	AutoStartTask bool
+	EnableSite    bool
+	StartIngID    int
+	EndIngID      int
+	HTTPPort      int
+	AuthCookie    string
 }
 
 //ReadConf convert config.json file to conf struct
