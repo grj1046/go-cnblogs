@@ -45,6 +45,10 @@ func Main(conf conf.Conf) {
 		}
 		time.Sleep(time.Second * 10)
 	}()
+
+	if !conf.EnableSite {
+		select {}
+	}
 }
 
 //LeakFinding check if ingID not in database, update it.
