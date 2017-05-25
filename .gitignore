@@ -4,6 +4,8 @@ conf.json
 *.db-journal
 *.log
 *.zip
+cnblogs
+cnblogs.exe
 
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
