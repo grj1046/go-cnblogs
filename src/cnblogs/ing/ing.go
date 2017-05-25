@@ -389,8 +389,9 @@ func (client *Client) GetLatestIngFromComment(pageSize int) ([]int, error) {
 	if pageSize <= 0 {
 		pageSize = 30
 	}
-	urlStr := "https://ing.cnblogs.com/ajax/ing/GetIngList?IngListType=recentcomment&PageIndex=1&" + strconv.Itoa(pageSize) +
-		"=1&Tag=&_=" + strconv.FormatInt(time.Now().Unix(), 10)
+	urlStr := "https://ing.cnblogs.com/ajax/ing/GetIngList?IngListType=recentcomment&PageIndex=1&PageSize=" + strconv.Itoa(pageSize) +
+		"&Tag=&_=" + strconv.FormatInt(time.Now().Unix(), 10)
+
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
 		return nil, err
@@ -412,13 +413,14 @@ func (client *Client) GetLatestIngFromComment(pageSize int) ([]int, error) {
 	}
 
 	ingList := make([]int, pageSize)
+	//fmt.Println("length", doc.Find("#feed_list ul li .ing-item .ing_body").Length())
 
-	doc.Find("#feed_list ul li").Each(func(index int, selection *goquery.Selection) {
-		attrID, exists := selection.Find(".ing_body").Attr("id")
+	doc.Find("#feed_list ul li .ing-item .ing_body").Each(func(index int, selection *goquery.Selection) {
+		attrID, exists := selection.Attr("id")
 		if exists {
 			tmpLen := len("ing_body_")
 			intVal, err := strconv.Atoi(attrID[tmpLen:])
-			if err != nil {
+			if err == nil {
 				ingList[index] = intVal
 			}
 		}
