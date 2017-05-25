@@ -53,23 +53,29 @@ func Main(conf conf.Conf) {
 	}
 }
 
-//LeakFinding check if ingID not in database, update it.
-func LeakFinding(ingClient *ing.Client, ingID int) error {
+//SyncSpecifyDateIng re-acquire the date specified, eg: 2017-05-25
+func SyncSpecifyDateIng(ingClient *ing.Client, date string) error {
 	sqlite, err := db.GetDB()
 	if err != nil {
 		return errors.New("open db error: " + err.Error())
 	}
 	defer sqlite.Close()
+	statSQL := "select max(IngID), min(IngID) from Ing where Time between '" + date + " 00:00:00' and '" + date + " 23:59:59'"
 
-	row := sqlite.QueryRow("select `Status` from `Ing` where IngID = ?", ingID)
-	var ingStatus int
-	err = row.Scan(&ingStatus)
-
-	if ingStatus == 0 || err == sql.ErrNoRows {
-		log.Println("Current IngID Not Exist In db, Update it. ", ingID)
-		err = GetIngAndSaveToDB(ingClient, ingID)
-		if err != nil {
-			return err
+	var maxIngCount int
+	var minIngCount int
+	err = sqlite.QueryRow(statSQL).Scan(&maxIngCount, &minIngCount)
+	if err != nil {
+		log.Println(err)
+	}
+	if maxIngCount > minIngCount && maxIngCount != 0 && minIngCount != 0 {
+		//statSQL = "select count(1), max(IngID) - min(IngID) from Ing where IngID between " + strconv.Itoa(minIngCount) + " and " + strconv.Itoa(maxIngCount)
+		for i := minIngCount; i <= maxIngCount; i++ {
+			log.Println("sync ing:", i)
+			err = GetIngAndSaveToDB(ingClient, i)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

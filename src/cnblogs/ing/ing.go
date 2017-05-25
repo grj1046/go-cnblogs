@@ -190,7 +190,7 @@ func (client *Client) GetIngByID(ingID int) (*Content, *OriginContent, error) {
 
 	publishTime := doc.Find(".ing_detail_title").Text()
 
-	publishTime = publishTime[strings.Index(publishTime, "：")+3:]
+	publishTime = publishTime[strings.LastIndex(publishTime, "：")+3:]
 	publishTime = strings.TrimSpace(publishTime)
 	content.Time = publishTime
 	//Lucky

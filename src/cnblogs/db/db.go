@@ -9,8 +9,8 @@ import (
 )
 
 //cache=shared&mode=rwc&_busy_timeout=3000
-var dbPath = "./data/cnblogs.db?cache=shared&mode=rwc&_busy_timeout=3000"
-var dbPathOrigin = "./data/cnblogs_origin.db?cache=shared&mode=rwc&_busy_timeout=3000"
+var dbPath = "./data/cnblogs.db?cache=shared&mode=rwc"
+var dbPathOrigin = "./data/cnblogs_origin.db?cache=shared&mode=rwc"
 
 //GetDB Get Sqlite database instance
 func GetDB() (*sql.DB, error) {
