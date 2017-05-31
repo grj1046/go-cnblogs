@@ -8,7 +8,6 @@ import (
 	"errors"
 	"log"
 	"strconv"
-
 	"time"
 )
 
@@ -22,11 +21,26 @@ func Main(conf conf.Conf) {
 		return
 	}
 	//http://home.cnblogs.com/ing/1115171/
+	TaskDefault(conf)
+
+	ingClient := &ing.Client{}
+	ingClient.Init(conf.AuthCookie)
+
+	//TaskSyncLatestIngToDB(ingClient)
+	//TaskSyncSpecifyPageComment(ingClient, 1) //maxPageIndex
+	//SyncSpecifyDateIng(ingClient, "2017-05-31")
+
+	//SyncIngs(ingClient, 1131799, 1142048)
+	//SyncIngs(ingClient, 1131799, 0)
+}
+
+//TaskDefault default task: sync ing & comment
+func TaskDefault(conf conf.Conf) {
 	go func() {
 		ingClient := &ing.Client{}
 		ingClient.Init(conf.AuthCookie)
 		for {
-			err = TaskSyncLatestIngToDB(ingClient)
+			err := TaskSyncLatestIngToDB(ingClient)
 			if err != nil {
 				log.Println("TaskSyncLatestIngToDB", err)
 			}
@@ -38,9 +52,10 @@ func Main(conf conf.Conf) {
 		ingClient := &ing.Client{}
 		ingClient.Init(conf.AuthCookie)
 		log.Println("run TaskSyncLatestCommentToDB")
+		pageIndex := 1
 		pageSize := 30
 		for {
-			err = TaskSyncLatestCommentToDB(ingClient, pageSize)
+			err := TaskSyncLatestCommentToDB(ingClient, pageIndex, pageSize)
 			if err != nil {
 				log.Println("TaskSyncLatestCommentToDB", err)
 			}
@@ -81,6 +96,30 @@ func SyncSpecifyDateIng(ingClient *ing.Client, date string) error {
 	return nil
 }
 
+//SyncIngs Sync Ing Range from...to, eg 113248 to 1142048
+//if to is zero, sync to maxIngID
+func SyncIngs(ingClient *ing.Client, from int, to int) {
+	if from < to || to != 0 {
+		log.Println("from:", from, "to", to)
+		return
+	}
+
+	maxIngID, err := ingClient.GetMaxIngID()
+	if err != nil {
+		log.Println("get maxIngID error", err)
+		return
+	}
+	to = maxIngID
+	for i := from; i <= to; i++ {
+		log.Println("sync ing:", i)
+		err = GetIngAndSaveToDB(ingClient, i)
+		if err != nil {
+			log.Println("GetIngAndSaveToDB err", err)
+			return
+		}
+	}
+}
+
 //TaskSyncLatestIngToDB Sync latest Ing to Database
 func TaskSyncLatestIngToDB(ingClient *ing.Client) error {
 	maxIngID, err := ingClient.GetMaxIngID()
@@ -116,9 +155,25 @@ func TaskSyncLatestIngToDB(ingClient *ing.Client) error {
 	return nil
 }
 
+//TaskSyncSpecifyPageComment sync specify page of comments
+func TaskSyncSpecifyPageComment(ingClient *ing.Client, maxPageIndex int) {
+	if maxPageIndex <= 0 {
+		log.Println("maxPageIndex error", maxPageIndex)
+		return
+	}
+	for i := 1; i <= maxPageIndex; i++ {
+		pageIndex := i
+		err := TaskSyncLatestCommentToDB(ingClient, pageIndex, 30)
+		if err != nil {
+			log.Println("TaskSyncSpecifyPageComment error", err)
+			return
+		}
+	}
+}
+
 //TaskSyncLatestCommentToDB sync latest comment to database
-func TaskSyncLatestCommentToDB(ingClient *ing.Client, pageSize int) error {
-	ingList, err := ingClient.GetLatestIngFromComment(pageSize)
+func TaskSyncLatestCommentToDB(ingClient *ing.Client, pageIndex int, pageSize int) error {
+	ingList, err := ingClient.GetLatestIngFromComment(pageIndex, pageSize)
 	if err != nil {
 		log.Println("GetLatestIngFromComment", err)
 	}

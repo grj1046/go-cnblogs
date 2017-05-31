@@ -385,12 +385,16 @@ func (client *Client) GetMaxIngID() (int, error) {
 
 //GetLatestIngFromComment get the latest ing's comment list ingID
 //https://ing.cnblogs.com/ajax/ing/GetIngList?IngListType=recentcomment&PageIndex=1&PageSize=30&Tag=&_=1495616250086
-func (client *Client) GetLatestIngFromComment(pageSize int) ([]int, error) {
+//it seems pageSize forever equals 30
+func (client *Client) GetLatestIngFromComment(pageIndex int, pageSize int) ([]int, error) {
+	if pageIndex <= 0 {
+		pageIndex = 1
+	}
 	if pageSize <= 0 {
 		pageSize = 30
 	}
-	urlStr := "https://ing.cnblogs.com/ajax/ing/GetIngList?IngListType=recentcomment&PageIndex=1&PageSize=" + strconv.Itoa(pageSize) +
-		"&Tag=&_=" + strconv.FormatInt(time.Now().Unix(), 10)
+	urlStr := "https://ing.cnblogs.com/ajax/ing/GetIngList?IngListType=recentcomment&PageIndex=" + strconv.Itoa(pageIndex) +
+		"&PageSize=" + strconv.Itoa(pageSize) + "&Tag=&_=" + strconv.FormatInt(time.Now().Unix(), 10)
 
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
