@@ -2,6 +2,7 @@ package site
 
 import (
 	"cnblogs/conf"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -21,6 +22,7 @@ func Main(conf conf.Conf) {
 	//API
 	http.HandleFunc("/api/manage", manageHandler)
 	http.HandleFunc("/api/ing", ingHandler)
+	http.HandleFunc("/api/latest", latestHandler)
 
 	err := http.ListenAndServe(":"+strconv.Itoa(HTTPPort), nil)
 	if err != nil {
@@ -32,8 +34,15 @@ func manageHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "Hello World")
 }
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/ing", http.StatusFound)
+func latestHandler(w http.ResponseWriter, r *http.Request) {
+	list, err := getLatest(30)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	strBytes, _ := json.Marshal(list)
+	io.WriteString(w, string(strBytes))
+	//http.Redirect(w, r, "/ing", http.StatusFound)
 }
 
 func ingHandler(w http.ResponseWriter, r *http.Request) {
