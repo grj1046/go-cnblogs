@@ -19,7 +19,8 @@ func Main(conf conf.Conf) {
 	//Static Html
 	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("www"))))
 	//API
-	http.HandleFunc("/manage", manageHandler)
+	http.HandleFunc("/api/manage", manageHandler)
+	http.HandleFunc("/api/ing", ingHandler)
 
 	err := http.ListenAndServe(":"+strconv.Itoa(HTTPPort), nil)
 	if err != nil {
