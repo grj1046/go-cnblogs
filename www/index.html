@@ -1,14 +1,37 @@
 ﻿<!doctype html>
-<html lang="en">
+<html ng-app="cnblogs">
 <head>
     <meta charset="utf-8">
-    <title>Ing</title>
+    <title>闪存</title>
     <meta http-equiv="Cache-Control" content="max-age=1000" />
     <link rel="stylesheet" href="css/index.css?v=1" />
     <script type="text/javascript" src="js/angular.min.js?v=1.6.4"></script>
     <script type="text/javascript" src="js/index.js?v=1"></script>
 </head>
-<body>
-    Hello World
+<body ng-controller="IngController">
+    <header class="main-header">
+        <div class="upper-area">
+            <div class="wrapper g">
+                <ul class="nav">
+                    <li><a target="_blank" href="https://www.cnblogs.com/">博客园</a></li>
+                    <li><a target="_blank" href="https://ing.cnblogs.com/">闪存</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+    <main>
+        <div class="searchBox">
+            <input id="keyword" type="text" maxlength="225"/>
+            <button>搜索</button>
+        </div>
+        <div>
+            <ul>
+                <li ng-repeat="item in data">
+                    {{item.Body}}
+                </li>
+            </ul>
+        </div>
+    </main>
+    <footer></footer>
 </body>
 </html>

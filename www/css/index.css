@@ -1,0 +1,150 @@
+
+* {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: sans-serif;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: #fff;
+  color: #393939;
+  font-family: "Myriad Pro", Arial, "FZLanTingHei-R-GBK", 方正兰亭黑, "Microsoft YaHei", 微软雅黑, STHeiti, 华文黑体, SimSun, 宋体, sans-serif;
+  font-size: 100%;
+  line-height: normal;
+}
+
+a {
+  background: transparent;
+}
+
+a:focus {
+  outline: thin dotted;
+}
+
+a:active,
+a:hover {
+  outline: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+::selection {
+  background: #2aad6f;
+  color: #FFF;
+}
+
+::-moz-selection {
+  background: #2aad6f;
+  color: #FFF;
+}
+
+ul, ol, dl, dd {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+img {
+  border: 0;
+  vertical-align: middle;
+  max-width: 100%;
+  height: auto;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.main-header {
+    z-index: 100;
+}
+
+.main-header .upper-area {
+    background: #009B72;
+    color: #fff;
+    min-height: 30px;
+    font-size: 13px;
+    font-size: 0.8125rem;
+}
+
+.main-header .upper-area .wrapper {
+    display: block;
+    text-align: right;
+}
+
+.wrapper {
+  padding: 0 0.75rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.wrapper:after {
+  clear: both;
+  content: '';
+  display: table;
+}
+
+.g {
+    letter-spacing: -0.35em;
+}
+
+.nav {
+    display: inline-block;
+    vertical-align: top;
+    letter-spacing: normal;
+}
+
+.nav li {
+    float: left;
+    border-left: 1px solid #47b488;
+}
+.nav li:last-child {
+    border-right: 1px solid #47b488;
+}
+
+.nav li a {
+    display: block;
+    padding: 6px 20px 5px;
+    min-height: 30px;
+    color: #FFF;
+}
+
+.nav li a:hover {
+    background: #47b488;
+}
+
+main {
+    margin:0 100px;
+}
+
+/******search box*******/
+.searchBox {
+    
+    margin:22px auto 0;
+}
+
+.searchBox input[type=text] {
+    margin: 0;
+    height: 32px;
+    width: 600px;
+    background-color: white;
+}
+
+.searchBox button {
+    height: 32px;
+    width: 90px;
+    margin: 0;
+}
