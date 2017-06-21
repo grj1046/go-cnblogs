@@ -23,6 +23,7 @@ body {
 
 a {
   background: transparent;
+  outline: 0 !important;
 }
 
 a:focus {
@@ -127,24 +128,93 @@ img {
 }
 
 main {
-    margin:0 100px;
+    margin:0 50px;
 }
 
-/******search box*******/
-.searchBox {
-    
-    margin:22px auto 0;
+.ing_list li {
+    padding: 10px 10px 5px 10px;
 }
 
-.searchBox input[type=text] {
-    margin: 0;
-    height: 32px;
-    width: 600px;
+.ing_list .item_body a {
+    color: gray;
+}
+
+.ing_list .ing_time {
+    color: gray;
+    font-size:smaller;
+}
+
+.item_author:link {
+    color: #075db3;
+    text-decoration: underline
+}
+
+.item_author:visited {
+    color: #075db3;
+    text-decoration: underline
+}
+
+.item_author:hover {
+    color: #f60;
+    text-decoration: underline
+}
+
+.item_author:active {
+    color: #075db3;
+    text-decoration: underline
+}
+
+.item_even {
+    background-color: #f5f5f5;
+}
+
+.item_odd {
     background-color: white;
 }
 
-.searchBox button {
-    height: 32px;
-    width: 90px;
+.item_footer {
+    margin-top:5px;
+    font-size: smaller;
+}
+
+.item_footer a {
+    text-decoration: none;
+    color: gray;
+}
+
+.item_star {
+    width:16px; 
+    height:16px; 
+    background-image:url(/img/star.svg);
+    display: inline-block;
+    background-size: 100%;
+    vertical-align: middle;
+}
+
+.item_home {
+    width:16px; 
+    height:16px; 
+    background-image:url(/img/home.svg);
+    display: inline-block;
+    background-size: 100%;
+    vertical-align: middle;
+}
+
+/******search box*******/
+.search_box {
+    margin:22px auto 0;
+}
+
+.search_box input[type=text] {
     margin: 0;
+    height: 32px;
+    width: 100%;
+    max-width: 500px;
+    min-width: 200px;
+    background-color: white;
+}
+
+.search_box button {
+    height: 32px;
+    width: 100px;
 }
