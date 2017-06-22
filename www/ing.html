@@ -2,7 +2,7 @@
 <html ng-app="cnblogs">
 <head>
     <meta charset="utf-8">
-    <title>闪存</title>
+    <title>闪存 - ings</title>
     <meta http-equiv="Cache-Control" content="max-age=1000" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="css/index.css?v=1" />
     <script type="text/javascript" src="js/angular.min.js?v=1.6.4"></script>
     <script type="text/javascript" src="js/moment.min.js?v=2.18.1"></script>
-    <script type="text/javascript" src="js/index.js?v=1"></script>
+    <script type="text/javascript" src="js/ing.js?v=1"></script>
 </head>
 <body ng-controller="IngController">
     <header class="main-header">
@@ -24,24 +24,21 @@
         </div>
     </header>
     <main>
-        <div class="search_box">
-            <input id="keyword" type="text" maxlength="225"/>
-            <button>搜索</button>
-        </div>
         <div style="margin:20px 0;">
-            <ul class="ing_list">
-                <li ng-repeat="item in data" ng-class="{true:'item_even', false:'item_odd'}[$index%2==0]">
+            <div ng-show="!data.Body" ng-bind="data.statusText || data.Status"></div>
+            <ul class="ing_list" ng-show="data.Body">
+                <li class="item_even">
                     <div class="ing_detail">
-                        <a class="item_author" target="_blank" title="闪存主页" ng-href="{{ingHome(item)}}"
-                            ng-bind="item.AuthorNickName||item.AuthorUserName||item.AuthorID"></a>：
-                        <span class="item_body" ng-bind-html="renderHtml(item.Body)"></span>
-                        <span class="item_star" ng-if="item.Lucky" title="幸运闪"></span>
-                        <a class="ing_time" target="_blank" title="{{item.Time}}"
-                            ng-href="{{ingDetail(item)}}" ng-bind="fromNow(item)"></a>
+                        <a class="item_author" target="_blank" title="闪存主页" ng-href="{{ingHome(data)}}"
+                            ng-bind="data.AuthorNickName||data.AuthorUserName||data.AuthorID"></a>：
+                        <span class="item_body" ng-bind-html="renderHtml(data.Body)"></span>
+                        <span class="item_star" ng-if="data.Lucky" title="幸运闪"></span>
+                        <a class="ing_time" target="_blank" title="{{data.Time}}"
+                            ng-href="{{ingDetail(data)}}" ng-bind="fromNow(data)"></a>
                     </div>
                     <div class="ing_comments">
                         <ul>
-                            <li ng-repeat="comment in item.Comments">
+                            <li ng-repeat="comment in data.Comments">
                                 <div class="comment_detail">
                                     <span class="comment_img" title="回应于{{comment.Time}}"></span>
                                     <a class="item_author" target="_blank" title="闪存主页" ng-href="{{ingHome(comment)}}"

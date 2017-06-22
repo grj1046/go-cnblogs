@@ -3,17 +3,51 @@ package site
 import (
 	"cnblogs/db"
 	"cnblogs/ing"
+	"database/sql"
 	"log"
 	"time"
 )
 
-func getLatest(count int) ([]ing.Content, error) {
+func getIng(ingID int) (*ing.Content, error) {
 	cnblogsdb, err := db.GetDB()
 	if err != nil {
 		return nil, err
 	}
 	defer cnblogsdb.Close()
-	rows, err := cnblogsdb.Query("select IngID, AuthorID, AuthorUserName, AuthorNickName, Time, Lucky, AcquiredAt, Body from Ing where Status = 200 order by IngID desc limit 30;")
+	content := &ing.Content{}
+	var acquireAt string
+	err = cnblogsdb.QueryRow("select IngID, AuthorID, AuthorUserName, AuthorNickName, Time, Status, Lucky, AcquiredAt, Body from Ing where IngID = ?;",
+		ingID).Scan(&content.IngID, &content.AuthorID, &content.AuthorUserName, &content.AuthorNickName, &content.Time,
+		&content.Status, &content.Lucky, &acquireAt, &content.Body)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	content.AcquiredAt = convertStrTime(acquireAt)
+	comments, err := getCommentByIngID(content.IngID)
+	if err != nil {
+		return nil, err
+	}
+	content.Comments = comments
+	return content, nil
+}
+
+func getIngs(pageIndex, pageSize int) ([]ing.Content, error) {
+	if pageIndex < 1 {
+		pageIndex = 1
+	}
+	if pageSize < 1 {
+		pageSize = 1
+	}
+	cnblogsdb, err := db.GetDB()
+	if err != nil {
+		return nil, err
+	}
+	defer cnblogsdb.Close()
+	rows, err := cnblogsdb.Query("select IngID, AuthorID, AuthorUserName, AuthorNickName, Time, Status, Lucky, AcquiredAt, Body from Ing where Status = 200 order by IngID desc limit ?,?;",
+		(pageIndex-1)*pageSize, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -23,12 +57,15 @@ func getLatest(count int) ([]ing.Content, error) {
 		content := &ing.Content{}
 		var acquireAt string
 		err = rows.Scan(&content.IngID, &content.AuthorID, &content.AuthorUserName, &content.AuthorNickName, &content.Time,
-			&content.Lucky, &acquireAt, &content.Body)
+			&content.Status, &content.Lucky, &acquireAt, &content.Body)
 		if err != nil {
 			return nil, err
 		}
 		content.AcquiredAt = convertStrTime(acquireAt)
-		comments, _ := getCommentByIngID(content.IngID)
+		comments, err := getCommentByIngID(content.IngID)
+		if err != nil {
+			return nil, err
+		}
 		content.Comments = comments
 		list = append(list, *content)
 	}

@@ -9,10 +9,15 @@ PRAGMA busy_timeout=4000;
 go get github.com/PuerkitoBio/goquery
 go get github.com/mattn/go-sqlite3
 go get github.com/robfig/cron
+go get -u github.com/gorilla/mux
 ```
 
 
 ```sql
-CREATE INDEX index_IngID ON OriginIng(IngID);
-CREATE INDEX index_IngID_HTMLHash ON OriginIng(IngID, HTMLHash);
+CREATE INDEX IF NOT EXISTS index_IngID ON OriginIng(IngID);
+CREATE INDEX IF NOT EXISTS index_IngID ON Comment(IngID);
+CREATE INDEX IF NOT EXISTS index_IngID_HTMLHash ON OriginIng(IngID, HTMLHash);
 ```
+
+
+https://github.com/revel/revel
